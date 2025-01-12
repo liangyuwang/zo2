@@ -23,8 +23,8 @@ class GPT(model.GPT):
 
 class Optimizer(MeZO2SGD):
     
-    def _init_zo2(self):
-        self.zo2_init_upload()
+    def init_zo2(self):
+        self.init_zo2_upload()
         print("Upload embedding and lm head to cuda.")
         for i in range(self.num_blocks):
             if i in self.offloading_blocks:
@@ -33,7 +33,7 @@ class Optimizer(MeZO2SGD):
                 self.model.transformer.h[i] = self.model.transformer.h[i].to(self.device)
                 print(f"Upload block {i} to cuda.")
     
-    def zo2_init_upload(self):
+    def init_zo2_upload(self):
         self.model.transformer.wte = self.model.transformer.wte.to(self.device)
         self.model.transformer.wpe = self.model.transformer.wpe.to(self.device)
         self.model.transformer.ln_f = self.model.transformer.ln_f.to(self.device)
