@@ -21,8 +21,8 @@ class MeZOSGD:
         self.max_zo_random_seed = config.max_zo_random_seed
     
     @torch.inference_mode
-    def zo_perturb_parameters(self, module: nn.Module, random_seed: int=None, scaling_factor: float=1):
-        torch.manual_seed(random_seed if random_seed is not None else self.zo_random_seed)        
+    def zo_perturb_parameters(self, module: nn.Module, scaling_factor: float=1):
+        # torch.manual_seed(random_seed if random_seed is not None else self.zo_random_seed)        
         for _, param in module.named_parameters():
             if param.requires_grad:
                 z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
@@ -44,11 +44,14 @@ class MeZOSGD:
     @torch.inference_mode
     def zo_step(self, inputs, seed: int=None):
         self.zo_random_seed = seed if seed else np.random.randint(self.max_zo_random_seed)
+        torch.manual_seed(self.zo_random_seed)
         self.zo_perturb_parameters(self.model, scaling_factor=1)
         loss1 = self.zo_forward(inputs)
+        torch.manual_seed(self.zo_random_seed)
         self.zo_perturb_parameters(self.model, scaling_factor=-2)
         loss2 = self.zo_forward(inputs)
         self.projected_grad = ((loss1 - loss2) / (2 * self.zo_eps)).item()
+        torch.manual_seed(self.zo_random_seed)
         self.zo_perturb_parameters(self.model, scaling_factor=1)
         return loss1
 
