@@ -21,7 +21,7 @@ def train_mezo_sgd(model, args, modelConfig, device='cuda'):
     input_ids, pos, labels = prepare_data(data, labels=None, device=device)
     torch.cuda.reset_peak_memory_stats()
     for i in tqdm(range(args.max_steps)):
-        loss = model(input_ids, pos, labels)
+        model(input_ids, pos, labels)
         check_peak_memory_usage(i, device, True)
 
 def train_mezo2_sgd(model, args, modelConfig, device='cuda'):
@@ -35,7 +35,7 @@ def train_mezo2_sgd(model, args, modelConfig, device='cuda'):
     model.eval()
     torch.cuda.reset_peak_memory_stats()
     for i in tqdm(range(args.max_steps)):
-        p_grad, loss = model(input_ids, pos, labels)
+        model(input_ids, pos, labels)
         check_peak_memory_usage(i, device, True)
 
 def test_mezo_sgd_training():

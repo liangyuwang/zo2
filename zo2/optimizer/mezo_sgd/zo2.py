@@ -23,6 +23,7 @@ class MeZO2SGD(MeZOSGD):
         self.device = config.working_device
         self.offloading_device = config.offloading_device
         self.max_zo_random_seed = config.max_zo_random_seed
+        self.overlap = config.overlap
         
         self.upload_stream = torch.cuda.Stream()
         self.offload_stream = torch.cuda.Stream()
@@ -30,7 +31,6 @@ class MeZO2SGD(MeZOSGD):
         self.rstate = None
         self.rstate_queue = deque(maxlen=2)
         self.last_rstate = None
-        self.overlap = config.overlap
         self.num_blocks = len(self.model.transformer.h)
         if config.offloading_blocks is not None:
             self.offloading_blocks = config.offloading_blocks
@@ -39,6 +39,7 @@ class MeZO2SGD(MeZOSGD):
         self.init_zo2()
     
     def init_zo2(self):
+        self.projected_grad = 0
         self.init_zo2_upload()
         print("Upload head and tail to cuda.")
         for i in range(self.num_blocks):
@@ -55,17 +56,8 @@ class MeZO2SGD(MeZOSGD):
         self.model.lm_head = self.model.lm_head.to(self.device)
     
     @torch.inference_mode
-    def zo_update(self, module, projected_grad=0.):
+    def zo_update(self, module):
         torch.cuda.set_rng_state(self.last_rstate)
-        # for name, param in module.named_parameters():
-        #     if param.requires_grad:
-        #         # Resample z
-        #         z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
-        #         if all(x not in name for x in ["bias", "layer_norm", "layernorm", "ln"]):
-        #             param.data.sub_(
-        #                 self.lr * (projected_grad * z + self.weight_decay * param.data))
-        #         else:
-        #             param.data.sub_(self.lr * projected_grad * z)
         super().zo_update(module)
         self.last_rstate = torch.cuda.get_rng_state()
         return module
@@ -85,6 +77,8 @@ class MeZO2SGD(MeZOSGD):
         self.rstate = torch.cuda.get_rng_state()
         return output1, output2
     
+    #*********************** tasks ***********************#
+
     def task_upload_to(self, module, device='cuda'):
         if self.overlap:
             self.upload_stream.synchronize()
@@ -123,7 +117,7 @@ class MeZO2SGD(MeZOSGD):
     #*********************** example ***********************#
 
     @torch.inference_mode()   
-    def zo_forward(self, input_ids, pos, projected_grad):
+    def zo_forward(self, input_ids, pos):
         self.rstate_queue.append(self.rstate.clone())
         if len(self.rstate_queue) == 2:
             self.last_rstate = self.rstate_queue.popleft()
@@ -134,11 +128,11 @@ class MeZO2SGD(MeZOSGD):
         we1, we2 = self.task_compute(self.model.transformer.wte,
                                 inputs1={"input": input_ids},
                                 inputs2={"input": input_ids},
-                                grad=projected_grad)
+                                grad=self.projected_grad)
         pe1, pe2 = self.task_compute(self.model.transformer.wpe, 
                                  {"input": pos}, 
                                  {"input": pos}, 
-                                 projected_grad)
+                                 self.projected_grad)
         # torch.cuda.synchronize()
         hidden_states1 = we1 + pe1
         hidden_states2 = we2 + pe2
@@ -153,7 +147,7 @@ class MeZO2SGD(MeZOSGD):
                     self.model.transformer.h[i-1], 
                     inputs1={"x": hidden_states1}, 
                     inputs2={"x": hidden_states2}, 
-                    grad=projected_grad)
+                    grad=self.projected_grad)
             else:
                 if i in self.offloading_blocks:
                     self.model.transformer.h[i] = self.task_upload_to(
@@ -167,7 +161,7 @@ class MeZO2SGD(MeZOSGD):
                     self.model.transformer.h[i-1], 
                     inputs1={"x": hidden_states1}, 
                     inputs2={"x": hidden_states2}, 
-                    grad=projected_grad)
+                    grad=self.projected_grad)
             torch.cuda.synchronize()    #TODO: remove global sync
         if N-2 in self.offloading_blocks:
             self.model.transformer.h[N-2] = self.task_offload_to(
@@ -176,7 +170,7 @@ class MeZO2SGD(MeZOSGD):
                     self.model.transformer.h[N-1], 
                     inputs1={"x": hidden_states1}, 
                     inputs2={"x": hidden_states2}, 
-                    grad=projected_grad
+                    grad=self.projected_grad
                 )
         torch.cuda.synchronize()    #TODO: remove global sync
         if N-1 in self.offloading_blocks:
@@ -185,24 +179,23 @@ class MeZO2SGD(MeZOSGD):
         logits1, logits2 = self.task_compute(self.model.transformer.ln_f,
                                              inputs1={"input": hidden_states1}, 
                                              inputs2={"input": hidden_states2}, 
-                                             grad=projected_grad)
+                                             grad=self.projected_grad)
         logits1, logits2 = self.task_compute(self.model.lm_head,
                                              inputs1={"input": logits1}, 
                                              inputs2={"input": logits2}, 
-                                             grad=projected_grad)
+                                             grad=self.projected_grad)
         torch.cuda.synchronize()
         return logits1, logits2
     
     @torch.inference_mode()
-    def zo_step(self, inputs, projected_grad=0., seed: int=None):
+    def zo_step(self, inputs, seed: int=None):
         self.zo_random_seed = seed if seed else np.random.randint(self.max_zo_random_seed)
         torch.manual_seed(self.zo_random_seed)
         torch.cuda.manual_seed(self.zo_random_seed)
         self.rstate = torch.cuda.get_rng_state()
         logits1, logits2 = self.zo_forward(
             input_ids=inputs["idx"], 
-            pos=inputs['pos'],
-            projected_grad=projected_grad
+            pos=inputs['pos']
         )
         loss1 = F.cross_entropy(
             logits1[:, :-1, :].reshape(-1, logits1.size(-1)), 
@@ -212,7 +205,7 @@ class MeZO2SGD(MeZOSGD):
             logits2[:, :-1, :].reshape(-1, logits2.size(-1)), 
             inputs['targets'][:, 1:].reshape(-1)
         )
-        projected_grad = ((loss1 - loss2) / (self.zo_eps * 2)).item()
-        return projected_grad, loss1.item()
+        self.projected_grad = ((loss1 - loss2) / (self.zo_eps * 2)).item()
+        return loss1.item()
     
     
