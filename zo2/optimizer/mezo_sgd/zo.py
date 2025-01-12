@@ -21,8 +21,7 @@ class MeZOSGD:
         self.max_zo_random_seed = config.max_zo_random_seed
     
     @torch.inference_mode
-    def zo_perturb_parameters(self, module: nn.Module, scaling_factor: float=1):
-        # torch.manual_seed(random_seed if random_seed is not None else self.zo_random_seed)        
+    def zo_perturb_parameters(self, module: nn.Module, scaling_factor: float=1):       
         for _, param in module.named_parameters():
             if param.requires_grad:
                 z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)

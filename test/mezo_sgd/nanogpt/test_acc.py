@@ -10,7 +10,7 @@ from zo2.model.nanogpt.model import GPTConfig, GPTConfigs
 from zo2.utils.utils import seed_everything
 from utils import model_size, prepare_data, get_args
 
-def train_mezo(model, args, modelConfig, device='cuda'):
+def train_mezo_sgd(model, args, modelConfig, device='cuda'):
     seed_everything(args.seed)
     total_parameters = model_size(model)["total"]
     model.eval()
@@ -24,7 +24,7 @@ def train_mezo(model, args, modelConfig, device='cuda'):
         res = "Iteration {}, loss: {}, projected grad: {}"
         tqdm.write(res.format(i, loss, model.opt.projected_grad))
 
-def train_mezo_offloading(model, args, modelConfig, device='cuda'):
+def train_mezo2_sgd(model, args, modelConfig, device='cuda'):
     seed_everything(args.seed)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
@@ -38,7 +38,7 @@ def train_mezo_offloading(model, args, modelConfig, device='cuda'):
         res = "Iteration {}, loss: {}, projected grad: {}"
         tqdm.write(res.format(i, loss, p_grad))
 
-def test_mezo():
+def test_mezo_sgd_training():
     args = get_args()
     seed_everything(args.seed)
     cfgs = GPTConfigs()
@@ -46,12 +46,12 @@ def test_mezo():
     zo_cfg = MeZOSGDConfig()
     zo_cfg.zo2 = False
     model_mezo = get_nanogpt_mezo_sgd(zo_cfg)(cfg, zo_cfg).to(args.device)
-    train_mezo(model=model_mezo, 
+    train_mezo_sgd(model=model_mezo, 
                args=args, 
                modelConfig=cfg, 
                device=args.device)
 
-def test_offloading():
+def test_mezo2_sgd_training():
     args = get_args()
     seed_everything(args.seed)
     cfgs = GPTConfigs()
@@ -59,13 +59,13 @@ def test_offloading():
     zo_cfg = MeZOSGDConfig()
     zo_cfg.zo2 = True
     model = get_nanogpt_mezo_sgd(zo_cfg)(cfg, zo_cfg)
-    train_mezo_offloading(model=model, 
+    train_mezo2_sgd(model=model, 
                           args=args, 
                           modelConfig=cfg, 
                           device=args.device)
 
 
 if __name__ == "__main__":
-    test_mezo()
-    test_offloading()
+    test_mezo_sgd_training()
+    test_mezo2_sgd_training()
     

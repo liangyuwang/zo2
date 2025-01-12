@@ -1,5 +1,7 @@
 import torch
+import time
 import argparse
+from tqdm import tqdm
 
 
 def get_args():
@@ -35,3 +37,25 @@ def prepare_data(input_ids, labels=None, device='cuda'):
     #     'targets': labels
     # }
     return input_ids, pos, labels
+
+
+def check_peak_memory_usage(iter, device="cuda:0", use_tqdm=False):
+    # Check the peak memory usage
+    peak_memory = torch.cuda.max_memory_allocated(device=device) / (1024 ** 2)
+    if use_tqdm:
+        tqdm.write("Peak GPU Memory after iteration {}: {:.2f} MB".format(iter+1, peak_memory))
+    else:
+        print(f"Peak GPU Memory after iteration {iter+1}: {peak_memory:.2f} MB")
+    torch.cuda.reset_peak_memory_stats(device=device)
+
+
+def check_throughput(iter, total_token_batch_size_per_iter, fn, *args, use_tqdm=False, **kwargs):
+    t1 = time.time()
+    out = fn(*args, **kwargs)
+    t2 = time.time()
+    time_cost = t2-t1
+    throughtput = total_token_batch_size_per_iter / time_cost
+    if use_tqdm:
+        tqdm.write("Time cost after iteration {}: {:.2f} ms, {:.2f} tok/s".format(iter+1, time_cost*1e3, throughtput))
+    else:
+        print("Time cost after iteration {}: {:.2f} ms, {:.2f} tok/s".format(iter+1, time_cost*1e3, throughtput))
