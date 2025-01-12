@@ -87,7 +87,7 @@ class MeZO2SGD(MeZOSGD):
         else:
             module = module.to(device)
         return module
-                
+
     def task_offload_to(self, module, device='cpu'):
         if self.overlap:
             self.offload_stream.synchronize()
