@@ -24,36 +24,38 @@ class MeZO2SGD(MeZOSGD):
         self.offloading_device = config.offloading_device
         self.max_zo_random_seed = config.max_zo_random_seed
         self.overlap = config.overlap
-        
+        self.offloading_blocks = config.offloading_blocks
+        self.init_zo2()
+    
+    def init_zo2(self):
         self.upload_stream = torch.cuda.Stream()
         self.offload_stream = torch.cuda.Stream()
         self.compute_stream = torch.cuda.Stream()
         self.rstate = None
         self.rstate_queue = deque(maxlen=2)
         self.last_rstate = None
-        self.num_blocks = len(self.model.transformer.h)
-        if config.offloading_blocks is not None:
-            self.offloading_blocks = config.offloading_blocks
-        else:
-            self.offloading_blocks = list(range(self.num_blocks))
-        self.init_zo2()
-    
-    def init_zo2(self):
         self.projected_grad = 0
         self.init_zo2_upload()
+    
+    def init_zo2_upload(self):
         print("Upload head and tail to cuda.")
+        self.model.transformer.wte = self.model.transformer.wte.to(self.device)
+        self.model.transformer.wpe = self.model.transformer.wpe.to(self.device)
+        self.model.transformer.ln_f = self.model.transformer.ln_f.to(self.device)
+        self.model.lm_head = self.model.lm_head.to(self.device)
+
+        self.num_blocks = len(self.model.transformer.h)
+        if self.offloading_blocks is not None:
+            self.offloading_blocks = self.offloading_blocks
+        else:
+            self.offloading_blocks = list(range(self.num_blocks))
+        print(f"Transformer blocks {self.offloading_blocks} will be offloaded to {self.offloading_device}")
         for i in range(self.num_blocks):
             if i in self.offloading_blocks:
                 continue
             else:
                 self.model.transformer.h[i] = self.model.transformer.h[i].to(self.device)
                 print(f"Upload block {i} to cuda.")
-    
-    def init_zo2_upload(self):
-        self.model.transformer.wte = self.model.transformer.wte.to(self.device)
-        self.model.transformer.wpe = self.model.transformer.wpe.to(self.device)
-        self.model.transformer.ln_f = self.model.transformer.ln_f.to(self.device)
-        self.model.lm_head = self.model.lm_head.to(self.device)
     
     @torch.inference_mode
     def zo_update(self, module):
@@ -184,7 +186,7 @@ class MeZO2SGD(MeZOSGD):
                                              inputs1={"input": logits1}, 
                                              inputs2={"input": logits2}, 
                                              grad=self.projected_grad)
-        torch.cuda.synchronize()
+        torch.cuda.synchronize()    #TODO: remove global sync
         return logits1, logits2
     
     @torch.inference_mode()
@@ -209,3 +211,5 @@ class MeZO2SGD(MeZOSGD):
         return loss1.item()
     
     
+class MeZO2SGDAMP(MeZO2SGD):
+    ...

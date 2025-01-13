@@ -23,23 +23,27 @@ class GPT(model.GPT):
 
 class Optimizer(MeZO2SGD):
     
-    def init_zo2(self):
-        self.init_zo2_upload()
-        print("Upload embedding and lm head to cuda.")
+    def init_zo2_upload(self):
+        print("Upload head and tail to cuda.")
+        self.model.transformer.wte = self.model.transformer.wte.to(self.device)
+        self.model.transformer.wpe = self.model.transformer.wpe.to(self.device)
+        self.model.transformer.ln_f = self.model.transformer.ln_f.to(self.device)
+        self.model.lm_head = self.model.lm_head.to(self.device)
+        
+        self.num_blocks = len(self.model.transformer.h)
+        if self.offloading_blocks is not None:
+            self.offloading_blocks = self.offloading_blocks
+        else:
+            self.offloading_blocks = list(range(self.num_blocks))
+        print(f"Transformer blocks {self.offloading_blocks} will be offloaded to {self.offloading_device}")
         for i in range(self.num_blocks):
             if i in self.offloading_blocks:
                 continue
             else:
                 self.model.transformer.h[i] = self.model.transformer.h[i].to(self.device)
                 print(f"Upload block {i} to cuda.")
-    
-    def init_zo2_upload(self):
-        self.model.transformer.wte = self.model.transformer.wte.to(self.device)
-        self.model.transformer.wpe = self.model.transformer.wpe.to(self.device)
-        self.model.transformer.ln_f = self.model.transformer.ln_f.to(self.device)
-        self.model.lm_head = self.model.lm_head.to(self.device)
 
-    @torch.inference_mode()   
+    @torch.inference_mode()
     def zo_forward(self, input_ids, pos, projected_grad):
         self.rstate_queue.append(self.rstate.clone())
         if len(self.rstate_queue) == 2:
@@ -107,7 +111,7 @@ class Optimizer(MeZO2SGD):
                                              inputs1={"input": logits1}, 
                                              inputs2={"input": logits2}, 
                                              grad=projected_grad)
-        torch.cuda.synchronize()
+        torch.cuda.synchronize()    #TODO: remove global sync
         return logits1, logits2
     
     @torch.inference_mode()
