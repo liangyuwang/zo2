@@ -35,7 +35,6 @@ def train_mezo2_sgd(model, args, modelConfig, device='cuda'):
         check_throughput(i, B, model, input_ids, pos, labels, use_tqdm=True)
 
 def test_mezo_sgd_training():
-    args = get_args()
     seed_everything(args.seed)
     cfgs = GPTConfigs()
     cfg = getattr(cfgs, args.model_id)
@@ -48,7 +47,6 @@ def test_mezo_sgd_training():
                device=args.device)
 
 def test_mezo2_sgd_training():
-    args = get_args()
     seed_everything(args.seed)
     cfgs = GPTConfigs()
     cfg = getattr(cfgs, args.model_id)
@@ -62,6 +60,10 @@ def test_mezo2_sgd_training():
 
 
 if __name__ == "__main__":
-    test_mezo_sgd_training()
-    test_mezo2_sgd_training()
-    
+    args = get_args()
+    if args.zo_method == "zo":
+        test_mezo_sgd_training()
+    elif args.zo_method == "zo2":
+        test_mezo2_sgd_training()
+    else:
+        raise ValueError
