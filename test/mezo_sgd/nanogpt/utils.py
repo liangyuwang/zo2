@@ -11,10 +11,12 @@ def get_args():
     args.add_argument("--verbose", action="store_true")
     args.add_argument("--max_steps", type=int, default=3)
     args.add_argument("--lr", type=float, default=1e-3)
+    args.add_argument("--weight_decay", type=float, default=1e-1)
     args.add_argument("--zo_eps", type=float, default=1e-3)
     args.add_argument("--seed", type=int, default=42)
     args.add_argument("--batch_size", type=int, default=1)
-    args.add_argument("--device", type=str, default="cuda")
+    args.add_argument("--offloading_device", type=str, default="cpu")
+    args.add_argument("--working_device", type=str, default="cuda:0")
     args = args.parse_args()
     return args
 

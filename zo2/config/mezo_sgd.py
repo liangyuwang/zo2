@@ -4,7 +4,7 @@ from dataclasses import dataclass
 @dataclass
 class MeZOSGDConfig:
     # zo config
-    lr: float = 1e-10
+    lr: float = 1e-3
     weight_decay: float = 1e-1
     eps: float = 1e-3
     max_zo_random_seed = 1000000000

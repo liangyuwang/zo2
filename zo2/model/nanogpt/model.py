@@ -27,6 +27,8 @@ class GPTConfigs:
     gpt2_medium: GPTConfig = GPTConfig(n_layer=24, n_head=16, n_embd=1024)
     gpt2_large: GPTConfig = GPTConfig(n_layer=36, n_head=20, n_embd=1280)
     gpt2_xl: GPTConfig = GPTConfig(n_layer=48, n_head=25, n_embd=1600)
+    opt_125m: GPTConfig = GPTConfig(n_layer=12, n_head=12, n_embd=768, block_size=2048)
+    opt_350m: GPTConfig = GPTConfig(n_layer=24, n_head=16, n_embd=1024, block_size=2048)
     opt_1_3b: GPTConfig = GPTConfig(n_layer=24, n_head=32, n_embd=2048, block_size=2048)
     opt_2_7b: GPTConfig = GPTConfig(n_layer=32, n_head=32, n_embd=2560, block_size=2048)
     opt_6_7b: GPTConfig = GPTConfig(n_layer=32, n_head=32, n_embd=4096, block_size=2048)
