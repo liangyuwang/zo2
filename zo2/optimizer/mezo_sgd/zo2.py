@@ -93,6 +93,7 @@ class MeZO2SGD(MeZOSGD):
     def task_offload_to(self, module, device='cpu'):
         if self.overlap:
             self.offload_stream.synchronize()
+            self.compute_stream.synchronize()   # offload depends on compute task
             with torch.cuda.stream(self.offload_stream):
                 module = module.to(device, non_blocking=True)
         else:
@@ -102,6 +103,7 @@ class MeZO2SGD(MeZOSGD):
     def task_compute(self, module, inputs1, inputs2, grad):
         if self.overlap:
             self.compute_stream.synchronize()
+            self.upload_stream.synchronize()   # compute depends on upload task
             with torch.cuda.stream(self.compute_stream):
                 o1, o2 = self.module_dual_forward(
                     module=module, 
@@ -123,10 +125,6 @@ class MeZO2SGD(MeZOSGD):
         self.rstate_queue.append(self.rstate.clone())
         if len(self.rstate_queue) == 2:
             self.last_rstate = self.rstate_queue.popleft()
-        if 0 in self.offloading_blocks:
-            self.model.transformer.h[0] = self.task_upload_to(
-                module=self.model.transformer.h[0], 
-                device=self.device)
         we1, we2 = self.task_compute(self.model.transformer.wte,
                                 inputs1={"input": input_ids},
                                 inputs2={"input": input_ids},
@@ -135,26 +133,25 @@ class MeZO2SGD(MeZOSGD):
                                  {"input": pos}, 
                                  {"input": pos}, 
                                  self.projected_grad)
-        # torch.cuda.synchronize()
         hidden_states1 = we1 + pe1
         hidden_states2 = we2 + pe2
+        if 0 in self.offloading_blocks:
+            self.model.transformer.h[0] = self.task_upload_to(
+                module=self.model.transformer.h[0], 
+                device=self.device)
         N = len(self.model.transformer.h)
         for i in range(1, N):
             if i == 1:
-                if i in self.offloading_blocks:
-                    self.model.transformer.h[i] = self.task_upload_to(
-                        module=self.model.transformer.h[i], 
-                        device=self.device)
                 hidden_states1, hidden_states2 = self.task_compute(
                     self.model.transformer.h[i-1], 
                     inputs1={"x": hidden_states1}, 
                     inputs2={"x": hidden_states2}, 
                     grad=self.projected_grad)
-            else:
                 if i in self.offloading_blocks:
                     self.model.transformer.h[i] = self.task_upload_to(
                         module=self.model.transformer.h[i], 
                         device=self.device)
+            else:
                 if i-2 in self.offloading_blocks:
                     self.model.transformer.h[i-2] = self.task_offload_to(
                         module=self.model.transformer.h[i-2], 
@@ -164,7 +161,10 @@ class MeZO2SGD(MeZOSGD):
                     inputs1={"x": hidden_states1}, 
                     inputs2={"x": hidden_states2}, 
                     grad=self.projected_grad)
-            torch.cuda.synchronize()    #TODO: remove global sync
+                if i in self.offloading_blocks:
+                    self.model.transformer.h[i] = self.task_upload_to(
+                        module=self.model.transformer.h[i], 
+                        device=self.device)
         if N-2 in self.offloading_blocks:
             self.model.transformer.h[N-2] = self.task_offload_to(
                 self.model.transformer.h[N-2], device=self.offloading_device)
@@ -174,7 +174,6 @@ class MeZO2SGD(MeZOSGD):
                     inputs2={"x": hidden_states2}, 
                     grad=self.projected_grad
                 )
-        torch.cuda.synchronize()    #TODO: remove global sync
         if N-1 in self.offloading_blocks:
             self.model.transformer.h[N-1] = self.task_offload_to(
                 self.model.transformer.h[N-1], device=self.offloading_device)
@@ -186,7 +185,7 @@ class MeZO2SGD(MeZOSGD):
                                              inputs1={"input": logits1}, 
                                              inputs2={"input": logits2}, 
                                              grad=self.projected_grad)
-        torch.cuda.synchronize()    #TODO: remove global sync
+        torch.cuda.synchronize()    # global sync to make sure all tasks finish
         return logits1, logits2
     
     @torch.inference_mode()

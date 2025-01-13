@@ -34,9 +34,9 @@ def train_mezo2_sgd(model, args, modelConfig, device='cuda'):
     input_ids, pos, labels = prepare_data(data, labels=None, device=device)
     model.eval()
     for i in tqdm(range(args.max_steps)):
-        p_grad, loss = model(input_ids, pos, labels)
+        loss = model(input_ids, pos, labels)
         res = "Iteration {}, loss: {}, projected grad: {}"
-        tqdm.write(res.format(i, loss, p_grad))
+        tqdm.write(res.format(i, loss, model.opt.projected_grad))
 
 def test_mezo_sgd_training():
     seed_everything(args.seed)
