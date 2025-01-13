@@ -29,7 +29,7 @@ class MeZOSGD:
 
     @torch.inference_mode
     def zo_update(self, module):
-        torch.manual_seed(self.zo_random_seed)
+
         for name, param in module.named_parameters():
             if param.requires_grad:
                 # Resample z
@@ -52,6 +52,7 @@ class MeZOSGD:
         self.projected_grad = ((loss1 - loss2) / (2 * self.zo_eps)).item()
         torch.manual_seed(self.zo_random_seed)
         self.zo_perturb_parameters(self.model, scaling_factor=1)
+        torch.manual_seed(self.zo_random_seed)
         self.zo_update(self.model)
         return loss1
 
