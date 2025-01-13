@@ -67,7 +67,7 @@ class MeZO2SGD(MeZOSGD):
     @torch.inference_mode()
     def module_dual_forward(self, module, inputs1, inputs2, projected_grad=0.):
         if projected_grad != 0:
-            module = self.zo_update(module, projected_grad=projected_grad)
+            module = self.zo_update(module)
         torch.cuda.set_rng_state(self.rstate)
         self.zo_perturb_parameters(module, scaling_factor=1)
         output1 = module(**inputs1)
