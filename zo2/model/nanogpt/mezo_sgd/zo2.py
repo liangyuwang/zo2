@@ -8,7 +8,7 @@ from ....config.mezo_sgd import MeZOSGDConfig
 
 
 class GPT(model.GPT):
-    def __init__(self, config, zo_config: MeZOSGDConfig, zo_training=True):
+    def __init__(self, config: model.GPTConfig, zo_config: MeZOSGDConfig, zo_training=True):
         super().__init__(config)
         self.zo_training = zo_training
         self.opt = Optimizer(model=self, config=zo_config)

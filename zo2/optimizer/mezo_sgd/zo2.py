@@ -152,6 +152,11 @@ class MeZO2SGD(MeZOSGD):
     
     @torch.inference_mode()   
     def inner_zo_forward(self, idx, pos, targets):
+        """
+        Example of ZO2 inner_zo_forward:
+            Match the same args as the original model forward,
+            and replace all 'self' into 'self.model'.
+        """
         we1, we2 = self.task_compute_module(self.model.transformer.wte,
                                 inputs1={"input": idx},
                                 inputs2={"input": idx},

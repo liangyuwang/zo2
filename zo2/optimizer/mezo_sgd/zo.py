@@ -60,7 +60,11 @@ class MeZOSGD:
 
     @torch.inference_mode
     def inner_zo_forward(self, idx, pos, targets):
-        # example of model forward
+        """
+        Example of ZO inner_zo_forward:
+            Match the same args as the original model forward,
+            and replace all 'self' into 'self.model'.
+        """
         tok_emb = self.model.transformer.wte(idx)
         pos_emb = self.model.transformer.wpe(pos)
         x = tok_emb + pos_emb
