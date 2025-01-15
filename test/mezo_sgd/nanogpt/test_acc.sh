@@ -34,7 +34,7 @@ do
         if (loss1[1] == loss2[1] && proj1[1] == proj2[1])
             printf "Iteration %d: %s✓ loss and projected grad match.%s\n", $2, green, nc;
         else
-            printf "Iteration %d: %s✗ Mismatch! File1 (loss, grad): (%s, %s), File2 (loss, grad): (%s, %s)\n \tLoss diff: %.6f, Proj grad diff: %.6f%s\n", $2, red, loss1[1], proj1[1], loss2[1], proj2[1], diff_loss, diff_proj, nc;
+            printf "Iteration %d: %s✗ Mismatch! ZO (loss, grad): (%s, %s), ZO2 (loss, grad): (%s, %s)\n \tLoss diff: %.6f, Proj grad diff: %.6f%s\n", $2, red, loss1[1], proj1[1], loss2[1], proj2[1], diff_loss, diff_proj, nc;
     }'
 
     rm $OUT1 $OUT2
