@@ -39,7 +39,7 @@ def test_mezo_sgd_training():
     cfgs = GPTConfigs()
     cfg = getattr(cfgs, args.model_id)
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
-        offloading_device=args.offloading_device, working_device=args.working_device)
+        working_device=args.working_device)
     zo_cfg.zo2 = False
     model_mezo = get_nanogpt_mezo_sgd(zo_cfg)(cfg, zo_cfg).to(args.working_device)
     train_mezo_sgd(model=model_mezo, 
@@ -52,7 +52,7 @@ def test_mezo2_sgd_training():
     cfgs = GPTConfigs()
     cfg = getattr(cfgs, args.model_id)
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
-        working_device=args.working_device)
+        offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
     model = get_nanogpt_mezo_sgd(zo_cfg)(cfg, zo_cfg)
     train_mezo2_sgd(model=model, 
