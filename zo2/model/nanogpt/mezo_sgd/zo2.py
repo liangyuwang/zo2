@@ -44,72 +44,74 @@ class Optimizer(MeZO2SGD):
                 print(f"Upload block {i} to cuda.")
 
     @torch.inference_mode()   
-    def zo_forward(self, input_ids, pos):
-        self.rstate_queue.append(self.rstate.clone())
-        if len(self.rstate_queue) == 2:
-            self.last_rstate = self.rstate_queue.popleft()
-        we1, we2 = self.task_compute(self.model.transformer.wte,
+    def zo_forward(self, input_ids, pos, targets):
+        we1, we2 = self.task_compute_module(self.model.transformer.wte,
                                 inputs1={"input": input_ids},
                                 inputs2={"input": input_ids},
                                 grad=self.projected_grad)
-        pe1, pe2 = self.task_compute(self.model.transformer.wpe, 
+        pe1, pe2 = self.task_compute_module(self.model.transformer.wpe, 
                                  {"input": pos}, 
                                  {"input": pos}, 
                                  self.projected_grad)
-        hidden_states1 = we1 + pe1
-        hidden_states2 = we2 + pe2
+        hidden_states1, hidden_states2 = self.task_compute_function(torch.add,
+                                                                    {"input": we1, "other": pe1},
+                                                                    {"input": we2, "other": pe2})
         if 0 in self.offloading_blocks:
-            self.model.transformer.h[0] = self.task_upload_to(
+            self.model.transformer.h[0] = self.task_upload(
                 module=self.model.transformer.h[0], 
                 device=self.device)
         N = len(self.model.transformer.h)
         for i in range(1, N):
             if i == 1:
-                hidden_states1, hidden_states2 = self.task_compute(
+                hidden_states1, hidden_states2 = self.task_compute_module(
                     self.model.transformer.h[i-1], 
                     inputs1={"x": hidden_states1}, 
                     inputs2={"x": hidden_states2}, 
                     grad=self.projected_grad)
                 if i in self.offloading_blocks:
-                    self.model.transformer.h[i] = self.task_upload_to(
+                    self.model.transformer.h[i] = self.task_upload(
                         module=self.model.transformer.h[i], 
                         device=self.device)
             else:
                 if i-2 in self.offloading_blocks:
-                    self.model.transformer.h[i-2] = self.task_offload_to(
+                    self.model.transformer.h[i-2] = self.task_offload(
                         module=self.model.transformer.h[i-2], 
                         device=self.offloading_device)
-                hidden_states1, hidden_states2 = self.task_compute(
+                hidden_states1, hidden_states2 = self.task_compute_module(
                     self.model.transformer.h[i-1], 
                     inputs1={"x": hidden_states1}, 
                     inputs2={"x": hidden_states2}, 
                     grad=self.projected_grad)
                 if i in self.offloading_blocks:
-                    self.model.transformer.h[i] = self.task_upload_to(
+                    self.model.transformer.h[i] = self.task_upload(
                         module=self.model.transformer.h[i], 
                         device=self.device)
         if N-2 in self.offloading_blocks:
-            self.model.transformer.h[N-2] = self.task_offload_to(
+            self.model.transformer.h[N-2] = self.task_offload(
                 self.model.transformer.h[N-2], device=self.offloading_device)
-        hidden_states1, hidden_states2 = self.task_compute(
+        hidden_states1, hidden_states2 = self.task_compute_module(
                     self.model.transformer.h[N-1], 
                     inputs1={"x": hidden_states1}, 
                     inputs2={"x": hidden_states2}, 
                     grad=self.projected_grad
                 )
         if N-1 in self.offloading_blocks:
-            self.model.transformer.h[N-1] = self.task_offload_to(
+            self.model.transformer.h[N-1] = self.task_offload(
                 self.model.transformer.h[N-1], device=self.offloading_device)
-        logits1, logits2 = self.task_compute(self.model.transformer.ln_f,
+        logits1, logits2 = self.task_compute_module(self.model.transformer.ln_f,
                                              inputs1={"input": hidden_states1}, 
                                              inputs2={"input": hidden_states2}, 
                                              grad=self.projected_grad)
-        logits1, logits2 = self.task_compute(self.model.lm_head,
+        logits1, logits2 = self.task_compute_module(self.model.lm_head,
                                              inputs1={"input": logits1}, 
                                              inputs2={"input": logits2}, 
                                              grad=self.projected_grad)
-        torch.cuda.synchronize()    # global sync to make sure all tasks finish
-        return logits1, logits2
+        loss1, loss2 = self.task_compute_function(F.cross_entropy,
+                                                  {"input": logits1[:, :-1, :].reshape(-1, logits1.size(-1)), 
+                                                   "target": targets[:, 1:].reshape(-1)},
+                                                  {"input": logits2[:, :-1, :].reshape(-1, logits2.size(-1)), 
+                                                   "target": targets[:, 1:].reshape(-1)})
+        return loss1, loss2
     
     @torch.inference_mode()
     def zo_step(self, inputs, seed: int=None):
@@ -117,18 +119,16 @@ class Optimizer(MeZO2SGD):
         torch.manual_seed(self.zo_random_seed)
         torch.cuda.manual_seed(self.zo_random_seed)
         self.rstate = torch.cuda.get_rng_state()
-        logits1, logits2 = self.zo_forward(
+        self.rstate_queue.append(self.rstate.clone())
+        if len(self.rstate_queue) == 2:
+            self.last_rstate = self.rstate_queue.popleft()
+        torch.cuda.synchronize()    # global sync to make sure all tasks finish
+        loss1, loss2 = self.zo_forward(
             input_ids=inputs["idx"], 
-            pos=inputs['pos']
+            pos=inputs['pos'],
+            targets=inputs['targets']
         )
-        loss1 = F.cross_entropy(
-            logits1[:, :-1, :].reshape(-1, logits1.size(-1)), 
-            inputs['targets'][:, 1:].reshape(-1)
-        )
-        loss2 = F.cross_entropy(
-            logits2[:, :-1, :].reshape(-1, logits2.size(-1)), 
-            inputs['targets'][:, 1:].reshape(-1)
-        )
+        torch.cuda.synchronize()    # global sync to make sure all tasks finish
         self.projected_grad = ((loss1 - loss2) / (self.zo_eps * 2)).item()
         return loss1.item()
     
