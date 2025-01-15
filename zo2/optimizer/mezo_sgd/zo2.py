@@ -37,26 +37,6 @@ class MeZO2SGD(MeZOSGD):
         self.projected_grad = 0
         self.init_zo2_upload()
     
-    def init_zo2_upload(self):
-        print("Upload head and tail to cuda.")
-        self.model.transformer.wte = self.model.transformer.wte.to(self.device)
-        self.model.transformer.wpe = self.model.transformer.wpe.to(self.device)
-        self.model.transformer.ln_f = self.model.transformer.ln_f.to(self.device)
-        self.model.lm_head = self.model.lm_head.to(self.device)
-
-        self.num_blocks = len(self.model.transformer.h)
-        if self.offloading_blocks is not None:
-            self.offloading_blocks = self.offloading_blocks
-        else:
-            self.offloading_blocks = list(range(self.num_blocks))
-        print(f"Transformer blocks {self.offloading_blocks} will be offloaded to {self.offloading_device}")
-        for i in range(self.num_blocks):
-            if i in self.offloading_blocks:
-                continue
-            else:
-                self.model.transformer.h[i] = self.model.transformer.h[i].to(self.device)
-                print(f"Upload block {i} to cuda.")
-    
     @torch.inference_mode
     def zo_update(self, module):
         torch.cuda.set_rng_state(self.last_rstate)
@@ -84,6 +64,21 @@ class MeZO2SGD(MeZOSGD):
         output1 = fn(**inputs1)
         output2 = fn(**inputs2)
         return output1, output2
+    
+    @torch.inference_mode()
+    def zo_forward(self, *args, seed: int=None, **kwargs):
+        self.zo_random_seed = seed if seed else np.random.randint(self.max_zo_random_seed)
+        torch.manual_seed(self.zo_random_seed)
+        torch.cuda.manual_seed(self.zo_random_seed)
+        self.rstate = torch.cuda.get_rng_state()
+        self.rstate_queue.append(self.rstate.clone())
+        if len(self.rstate_queue) == 2:
+            self.last_rstate = self.rstate_queue.popleft()
+        torch.cuda.synchronize()    # global sync to make sure all tasks finish
+        loss1, loss2 = self.inner_zo_forward(*args, **kwargs)
+        torch.cuda.synchronize()    # global sync to make sure all tasks finish
+        self.projected_grad = ((loss1 - loss2) / (self.zo_eps * 2)).item()
+        return loss1.item()
     
     #*********************** tasks ***********************#
 
@@ -135,11 +130,31 @@ class MeZO2SGD(MeZOSGD):
     
     #*********************** example ***********************#
 
+    def init_zo2_upload(self):
+        print("Upload head and tail to cuda.")
+        self.model.transformer.wte = self.model.transformer.wte.to(self.device)
+        self.model.transformer.wpe = self.model.transformer.wpe.to(self.device)
+        self.model.transformer.ln_f = self.model.transformer.ln_f.to(self.device)
+        self.model.lm_head = self.model.lm_head.to(self.device)
+
+        self.num_blocks = len(self.model.transformer.h)
+        if self.offloading_blocks is not None:
+            self.offloading_blocks = self.offloading_blocks
+        else:
+            self.offloading_blocks = list(range(self.num_blocks))
+        print(f"Transformer blocks {self.offloading_blocks} will be offloaded to {self.offloading_device}")
+        for i in range(self.num_blocks):
+            if i in self.offloading_blocks:
+                continue
+            else:
+                self.model.transformer.h[i] = self.model.transformer.h[i].to(self.device)
+                print(f"Upload block {i} to cuda.")
+    
     @torch.inference_mode()   
-    def zo_forward(self, input_ids, pos, targets):
+    def inner_zo_forward(self, idx, pos, targets):
         we1, we2 = self.task_compute_module(self.model.transformer.wte,
-                                inputs1={"input": input_ids},
-                                inputs2={"input": input_ids},
+                                inputs1={"input": idx},
+                                inputs2={"input": idx},
                                 grad=self.projected_grad)
         pe1, pe2 = self.task_compute_module(self.model.transformer.wpe, 
                                  {"input": pos}, 
@@ -204,25 +219,6 @@ class MeZO2SGD(MeZOSGD):
                                                   {"input": logits2[:, :-1, :].reshape(-1, logits2.size(-1)), 
                                                    "target": targets[:, 1:].reshape(-1)})
         return loss1, loss2
-    
-    @torch.inference_mode()
-    def zo_step(self, inputs, seed: int=None):
-        self.zo_random_seed = seed if seed else np.random.randint(self.max_zo_random_seed)
-        torch.manual_seed(self.zo_random_seed)
-        torch.cuda.manual_seed(self.zo_random_seed)
-        self.rstate = torch.cuda.get_rng_state()
-        self.rstate_queue.append(self.rstate.clone())
-        if len(self.rstate_queue) == 2:
-            self.last_rstate = self.rstate_queue.popleft()
-        torch.cuda.synchronize()    # global sync to make sure all tasks finish
-        loss1, loss2 = self.zo_forward(
-            input_ids=inputs["idx"], 
-            pos=inputs['pos'],
-            targets=inputs['targets']
-        )
-        torch.cuda.synchronize()    # global sync to make sure all tasks finish
-        self.projected_grad = ((loss1 - loss2) / (self.zo_eps * 2)).item()
-        return loss1.item()
     
     
 class MeZO2SGDAMP(MeZO2SGD):

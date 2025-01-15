@@ -41,14 +41,14 @@ class MeZOSGD:
                     param.data.sub_(self.lr * self.projected_grad * z)
     
     @torch.inference_mode
-    def zo_step(self, inputs, seed: int=None):
-        self.zo_random_seed = seed if seed else np.random.randint(self.max_zo_random_seed)
+    def zo_forward(self, *args, zo_random_seed: int=None, **kwargs):
+        self.zo_random_seed = zo_random_seed if zo_random_seed else np.random.randint(self.max_zo_random_seed)
         torch.manual_seed(self.zo_random_seed)
         self.zo_perturb_parameters(self.model, scaling_factor=1)
-        loss1 = self.zo_forward(inputs)
+        loss1 = self.inner_zo_forward(*args, **kwargs)
         torch.manual_seed(self.zo_random_seed)
         self.zo_perturb_parameters(self.model, scaling_factor=-2)
-        loss2 = self.zo_forward(inputs)
+        loss2 = self.inner_zo_forward(*args, **kwargs)
         self.projected_grad = ((loss1 - loss2) / (2 * self.zo_eps)).item()
         torch.manual_seed(self.zo_random_seed)
         self.zo_perturb_parameters(self.model, scaling_factor=1)
@@ -56,13 +56,13 @@ class MeZOSGD:
         self.zo_update(self.model)
         return loss1
 
-    #*********************** api ***********************#
+    #*********************** example ***********************#
 
     @torch.inference_mode
-    def zo_forward(self, inputs):
+    def inner_zo_forward(self, idx, pos, targets):
         # example of model forward
-        tok_emb = self.model.transformer.wte(inputs['idx'])
-        pos_emb = self.model.transformer.wpe(inputs['pos'])
+        tok_emb = self.model.transformer.wte(idx)
+        pos_emb = self.model.transformer.wpe(pos)
         x = tok_emb + pos_emb
         for block in self.model.transformer.h:
             x = block(x)
@@ -70,7 +70,7 @@ class MeZOSGD:
         x = self.model.lm_head(x)
         loss = F.cross_entropy(
             x[:, :-1, :].reshape(-1, x.size(-1)), 
-            inputs['targets'][:, 1:].reshape(-1)
+            targets[:, 1:].reshape(-1)
         )
         return loss.detach()
 

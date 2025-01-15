@@ -14,7 +14,7 @@ class GPT(model.GPT):
 
     def forward(self, idx, pos, targets=None):
         if self.zo_training:
-            return self.opt.zo_step({"idx": idx, "pos": pos, "targets": targets})
+            return self.opt.zo_forward(idx, pos, targets)
         else:
             return super().forward(idx, pos, targets)
 
@@ -22,10 +22,9 @@ class GPT(model.GPT):
 class Optimizer(MeZOSGD):
 
     @torch.inference_mode
-    def zo_forward(self, inputs):
-        # example of model forward
-        tok_emb = self.model.transformer.wte(inputs['idx'])
-        pos_emb = self.model.transformer.wpe(inputs['pos'])
+    def inner_zo_forward(self, idx, pos, targets):
+        tok_emb = self.model.transformer.wte(idx)
+        pos_emb = self.model.transformer.wpe(pos)
         x = tok_emb + pos_emb
         for block in self.model.transformer.h:
             x = block(x)
@@ -33,6 +32,6 @@ class Optimizer(MeZOSGD):
         x = self.model.lm_head(x)
         loss = F.cross_entropy(
             x[:, :-1, :].reshape(-1, x.size(-1)), 
-            inputs['targets'][:, 1:].reshape(-1)
+            targets[:, 1:].reshape(-1)
         )
         return loss.detach()

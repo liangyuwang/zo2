@@ -15,7 +15,7 @@ class GPT(model.GPT):
 
     def forward(self, idx, pos, targets=None):
         if self.zo_training:
-            return self.opt.zo_step({"idx": idx, "pos": pos, "targets": targets})
+            return self.opt.zo_forward(idx, pos, targets)
         else:
             # for inference purpose
             return super().forward(idx, pos, targets)
@@ -44,10 +44,10 @@ class Optimizer(MeZO2SGD):
                 print(f"Upload block {i} to cuda.")
 
     @torch.inference_mode()   
-    def zo_forward(self, input_ids, pos, targets):
+    def inner_zo_forward(self, idx, pos, targets):
         we1, we2 = self.task_compute_module(self.model.transformer.wte,
-                                inputs1={"input": input_ids},
-                                inputs2={"input": input_ids},
+                                inputs1={"input": idx},
+                                inputs2={"input": idx},
                                 grad=self.projected_grad)
         pe1, pe2 = self.task_compute_module(self.model.transformer.wpe, 
                                  {"input": pos}, 
@@ -112,23 +112,4 @@ class Optimizer(MeZO2SGD):
                                                   {"input": logits2[:, :-1, :].reshape(-1, logits2.size(-1)), 
                                                    "target": targets[:, 1:].reshape(-1)})
         return loss1, loss2
-    
-    @torch.inference_mode()
-    def zo_step(self, inputs, seed: int=None):
-        self.zo_random_seed = seed if seed else np.random.randint(self.max_zo_random_seed)
-        torch.manual_seed(self.zo_random_seed)
-        torch.cuda.manual_seed(self.zo_random_seed)
-        self.rstate = torch.cuda.get_rng_state()
-        self.rstate_queue.append(self.rstate.clone())
-        if len(self.rstate_queue) == 2:
-            self.last_rstate = self.rstate_queue.popleft()
-        torch.cuda.synchronize()    # global sync to make sure all tasks finish
-        loss1, loss2 = self.zo_forward(
-            input_ids=inputs["idx"], 
-            pos=inputs['pos'],
-            targets=inputs['targets']
-        )
-        torch.cuda.synchronize()    # global sync to make sure all tasks finish
-        self.projected_grad = ((loss1 - loss2) / (self.zo_eps * 2)).item()
-        return loss1.item()
     
