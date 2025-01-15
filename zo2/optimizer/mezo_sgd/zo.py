@@ -63,7 +63,7 @@ class MeZOSGD:
         """
         Example of ZO inner_zo_forward:
             Match the same args as the original model forward,
-            and replace all 'self' into 'self.model'.
+            and replace all 'self' to 'self.model'.
         """
         tok_emb = self.model.transformer.wte(idx)
         pos_emb = self.model.transformer.wpe(pos)

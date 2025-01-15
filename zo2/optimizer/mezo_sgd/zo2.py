@@ -155,7 +155,7 @@ class MeZO2SGD(MeZOSGD):
         """
         Example of ZO2 inner_zo_forward:
             Match the same args as the original model forward,
-            and replace all 'self' into 'self.model'.
+            and replace all 'self' to 'self.model'.
         """
         we1, we2 = self.task_compute_module(self.model.transformer.wte,
                                 inputs1={"input": idx},
