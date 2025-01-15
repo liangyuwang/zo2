@@ -16,9 +16,7 @@ def train_mezo_sgd(model, args, modelConfig, device='cuda'):
     model.eval()
     print(f"model size: {total_parameters/1024**3:.2f} B")
     print("Init dataset")
-    B, T = args.batch_size, modelConfig.block_size
-    data = torch.randint(0, modelConfig.vocab_size, (B, T)).to(device)
-    input_ids, pos, labels = prepare_data(data, labels=None, device=device)
+    input_ids, pos, labels = prepare_data(modelConfig.vocab_size, args.batch_size, modelConfig.block_size, device=device)
     for i in tqdm(range(args.max_steps)):
         loss = model(input_ids, pos, labels)
         res = "Iteration {}, loss: {}, projected grad: {}"
@@ -29,9 +27,7 @@ def train_mezo2_sgd(model, args, modelConfig, device='cuda'):
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
     print("Init dataset")
-    B, T = args.batch_size, modelConfig.block_size
-    data = torch.randint(0, modelConfig.vocab_size, (B, T)).to(device)
-    input_ids, pos, labels = prepare_data(data, labels=None, device=device)
+    input_ids, pos, labels = prepare_data(modelConfig.vocab_size, args.batch_size, modelConfig.block_size, device=device)
     model.eval()
     for i in tqdm(range(args.max_steps)):
         loss = model(input_ids, pos, labels)

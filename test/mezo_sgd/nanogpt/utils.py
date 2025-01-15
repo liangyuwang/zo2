@@ -27,18 +27,11 @@ def model_size(model: torch.nn.Module):
     return {"total": total_size, "trainable": trainable_size}
 
 
-def prepare_data(input_ids, labels=None, device='cuda'):
-    input_ids = input_ids.to(device)
+def prepare_data(V, B, T, device='cuda'):
+    data_batch = torch.randint(0, V, (B, T+1)).to(device)
+    input_ids = data_batch[:, :T]
+    labels = data_batch[:, 1:T+1]
     pos = torch.arange(input_ids.shape[1], dtype=torch.long, device=device).unsqueeze(0)
-    if labels is not None:
-        labels = labels.to(device)
-    else:
-        labels = input_ids.clone().to(device)
-    # return {
-    #     'idx': input_ids,
-    #     "pos": pos, 
-    #     'targets': labels
-    # }
     return input_ids, pos, labels
 
 
