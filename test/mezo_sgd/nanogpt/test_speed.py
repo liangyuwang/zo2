@@ -64,4 +64,4 @@ if __name__ == "__main__":
     elif args.zo_method == "zo2":
         test_mezo2_sgd_training()
     else:
-        raise ValueError
+        raise NotImplementedError
