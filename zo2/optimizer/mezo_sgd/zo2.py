@@ -31,11 +31,23 @@ class MeZO2SGD(MeZOSGD):
         self.upload_stream = torch.cuda.Stream()
         self.offload_stream = torch.cuda.Stream()
         self.compute_stream = torch.cuda.Stream()
+        self.zo_random_seed = None
         self.rstate = None
         self.rstate_queue = deque(maxlen=2)
         self.last_rstate = None
         self.projected_grad = 0
         self.init_zo2_upload()
+    
+    def assign_zo2_attributes(self, other):
+        """
+            For nested model code.
+            Assign self's zo2 attributes to others.
+        """
+        attrs_to_assign = ['upload_stream', 'offload_stream', 'compute_stream', 
+                           'zo_random_seed', 'rstate', 'rstate_queue', 'last_rstate', 
+                           'projected_grad']
+        for attr in attrs_to_assign:
+            setattr(other, attr, getattr(self, attr))
     
     @torch.inference_mode
     def zo_update(self, module):
@@ -174,30 +186,20 @@ class MeZO2SGD(MeZOSGD):
                 device=self.device)
         N = len(self.model.transformer.h)
         for i in range(1, N):
-            if i == 1:
-                hidden_states1, hidden_states2 = self.task_compute_module(
-                    self.model.transformer.h[i-1], 
-                    inputs1={"x": hidden_states1}, 
-                    inputs2={"x": hidden_states2}, 
-                    grad=self.projected_grad)
-                if i in self.offloading_blocks:
-                    self.model.transformer.h[i] = self.task_upload(
-                        module=self.model.transformer.h[i], 
-                        device=self.device)
-            else:
+            if i != 1:
                 if i-2 in self.offloading_blocks:
                     self.model.transformer.h[i-2] = self.task_offload(
                         module=self.model.transformer.h[i-2], 
                         device=self.offloading_device)
-                hidden_states1, hidden_states2 = self.task_compute_module(
-                    self.model.transformer.h[i-1], 
-                    inputs1={"x": hidden_states1}, 
-                    inputs2={"x": hidden_states2}, 
-                    grad=self.projected_grad)
-                if i in self.offloading_blocks:
-                    self.model.transformer.h[i] = self.task_upload(
-                        module=self.model.transformer.h[i], 
-                        device=self.device)
+            hidden_states1, hidden_states2 = self.task_compute_module(
+                self.model.transformer.h[i-1], 
+                inputs1={"x": hidden_states1}, 
+                inputs2={"x": hidden_states2}, 
+                grad=self.projected_grad)
+            if i in self.offloading_blocks:
+                self.model.transformer.h[i] = self.task_upload(
+                    module=self.model.transformer.h[i], 
+                    device=self.device)
         if N-2 in self.offloading_blocks:
             self.model.transformer.h[N-2] = self.task_offload(
                 self.model.transformer.h[N-2], device=self.offloading_device)

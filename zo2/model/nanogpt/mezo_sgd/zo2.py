@@ -62,30 +62,20 @@ class Optimizer(MeZO2SGD):
                 device=self.device)
         N = len(self.model.transformer.h)
         for i in range(1, N):
-            if i == 1:
-                hidden_states1, hidden_states2 = self.task_compute_module(
-                    self.model.transformer.h[i-1], 
-                    inputs1={"x": hidden_states1}, 
-                    inputs2={"x": hidden_states2}, 
-                    grad=self.projected_grad)
-                if i in self.offloading_blocks:
-                    self.model.transformer.h[i] = self.task_upload(
-                        module=self.model.transformer.h[i], 
-                        device=self.device)
-            else:
+            if i != 1:
                 if i-2 in self.offloading_blocks:
                     self.model.transformer.h[i-2] = self.task_offload(
                         module=self.model.transformer.h[i-2], 
                         device=self.offloading_device)
-                hidden_states1, hidden_states2 = self.task_compute_module(
-                    self.model.transformer.h[i-1], 
-                    inputs1={"x": hidden_states1}, 
-                    inputs2={"x": hidden_states2}, 
-                    grad=self.projected_grad)
-                if i in self.offloading_blocks:
-                    self.model.transformer.h[i] = self.task_upload(
-                        module=self.model.transformer.h[i], 
-                        device=self.device)
+            hidden_states1, hidden_states2 = self.task_compute_module(
+                self.model.transformer.h[i-1], 
+                inputs1={"x": hidden_states1}, 
+                inputs2={"x": hidden_states2}, 
+                grad=self.projected_grad)
+            if i in self.offloading_blocks:
+                self.model.transformer.h[i] = self.task_upload(
+                    module=self.model.transformer.h[i], 
+                    device=self.device)
         if N-2 in self.offloading_blocks:
             self.model.transformer.h[N-2] = self.task_offload(
                 self.model.transformer.h[N-2], device=self.offloading_device)
