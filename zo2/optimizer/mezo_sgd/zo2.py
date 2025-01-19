@@ -38,16 +38,16 @@ class MeZO2SGD(MeZOSGD):
         self.projected_grad = 0
         self.init_zo2_upload()
     
-    def assign_zo2_attributes(self, other):
+    def assign_zo2_attributes(self, source, target):
         """
             For nested model code.
-            Assign self's zo2 attributes to others.
+            Assign source's zo2 attributes to target.
         """
         attrs_to_assign = ['upload_stream', 'offload_stream', 'compute_stream', 
                            'zo_random_seed', 'rstate', 'rstate_queue', 'last_rstate', 
                            'projected_grad']
         for attr in attrs_to_assign:
-            setattr(other, attr, getattr(self, attr))
+            setattr(target, attr, getattr(source, attr))
     
     @torch.inference_mode
     def zo_update(self, module):
