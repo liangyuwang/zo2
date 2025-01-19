@@ -17,8 +17,6 @@ from utils import (
 )
 
 def train_mezo_sgd_causalLM(model_config, zo_config, device='cuda'):
-    zo_config = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
-            working_device=args.working_device)
     model = zo.OPTForCausalLM(model_config, zo_config).to(device)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
@@ -31,8 +29,6 @@ def train_mezo_sgd_causalLM(model_config, zo_config, device='cuda'):
         tqdm.write(res.format(i, loss, model.opt.projected_grad))
 
 def train_mezo2_sgd_causalLM(model_config, zo_config, device='cuda'):
-    zo_config = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
-            working_device=args.working_device)
     model = zo2.OPTForCausalLM(model_config, zo_config)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
@@ -46,8 +42,6 @@ def train_mezo2_sgd_causalLM(model_config, zo_config, device='cuda'):
 
 
 def train_mezo_sgd_sequence_classification(model_config, zo_config, device='cuda'):
-    zo_config = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
-            working_device=args.working_device)
     model = zo.OPTForSequenceClassification(model_config, zo_config).to(device)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
@@ -60,8 +54,6 @@ def train_mezo_sgd_sequence_classification(model_config, zo_config, device='cuda
         tqdm.write(res.format(i, loss, model.opt.projected_grad))
 
 def train_mezo2_sgd_sequence_classification(model_config, zo_config, device='cuda'):
-    zo_config = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
-            working_device=args.working_device)
     model = zo2.OPTForSequenceClassification(model_config, zo_config).to(device)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
@@ -75,8 +67,6 @@ def train_mezo2_sgd_sequence_classification(model_config, zo_config, device='cud
 
 
 def train_mezo_sgd_question_answering(model_config, zo_config, device='cuda'):
-    zo_config = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
-            working_device=args.working_device)
     model = zo.OPTForQuestionAnswering(model_config, zo_config).to("cuda")
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
@@ -89,8 +79,6 @@ def train_mezo_sgd_question_answering(model_config, zo_config, device='cuda'):
         tqdm.write(res.format(i, loss, model.opt.projected_grad))
 
 def train_mezo2_sgd_question_answering(model_config, zo_config, device='cuda'):
-    zo_config = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
-            working_device=args.working_device)
     model = zo2.OPTForQuestionAnswering(model_config, zo_config).to("cuda")
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
@@ -119,6 +107,7 @@ def test_mezo2_sgd_causalLM_training():
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
+    zo_cfg.overlap = args.overlap=="all"
     train_mezo2_sgd_causalLM(model_config, zo_cfg, device=args.working_device)
 
 
@@ -138,6 +127,7 @@ def test_mezo2_sgd_sequence_classification_training():
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
+    zo_cfg.overlap = args.overlap=="all"
     train_mezo2_sgd_sequence_classification(model_config, zo_cfg, device=args.working_device)
 
 
@@ -157,6 +147,7 @@ def test_mezo2_sgd_question_answering_training():
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
+    zo_cfg.overlap = args.overlap=="all"
     train_mezo2_sgd_question_answering(model_config, zo_cfg, device=args.working_device)
 
 
