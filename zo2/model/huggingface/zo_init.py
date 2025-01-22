@@ -2,15 +2,18 @@ from contextlib import contextmanager
 import torch
 import transformers
 
-import zo2
+from . import (
+    opt,
+    # llama,
+)
 
 _zo2_supported_models = {
-    transformers.OPTForCausalLM: zo2.get_opt_for_causalLM,
-    transformers.OPTForSequenceClassification: zo2.get_opt_for_sequence_classification,
-    transformers.OPTForQuestionAnswering: zo2.get_opt_for_question_answering,
+    transformers.OPTForCausalLM: opt.get_opt_for_causalLM,
+    transformers.OPTForSequenceClassification: opt.get_opt_for_sequence_classification,
+    transformers.OPTForQuestionAnswering: opt.get_opt_for_question_answering,
 
-    # transformers.LlamaForCausalLM: zo2.get_llama_for_causalLM,
-    # transformers.LlamaForSequenceClassification: zo2.get_llama_for_sequence_classification,
+    # transformers.LlamaForCausalLM: llama.get_llama_for_causalLM,
+    # transformers.LlamaForSequenceClassification: llama.get_llama_for_sequence_classification,
 }
 
 @contextmanager
