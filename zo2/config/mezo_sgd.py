@@ -3,6 +3,9 @@ from dataclasses import dataclass
 
 @dataclass
 class MeZOSGDConfig:
+    # zo method
+    zo_method: str = "mezo-sgd" # zo method name, every zo config must include this attribute
+
     # zo config
     lr: float = 1e-3
     weight_decay: float = 1e-1
