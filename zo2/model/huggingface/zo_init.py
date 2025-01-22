@@ -31,6 +31,6 @@ def zo2_hf_init(zo_config):
 def main():
     # user api:
     from transformers import OPTForCausalLM
-    with zo2_hf_init():
+    with zo2_hf_init(zo_config):
         model = OPTForCausalLM.from_pretrained(...)
     print(type(model))  # should be zo2.OPTForCausalLM
