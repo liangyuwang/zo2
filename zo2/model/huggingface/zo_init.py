@@ -25,7 +25,7 @@ def zo2_hf_init(zo_config):
                 original_models[orig_class] = getattr(transformers, orig_class.__name__)
                 setattr(transformers, orig_class.__name__, get_zo2_class(zo_config))
             else:
-                raise NotImplementedError(f"Model '{orig_class.__name__}' is not spuuorted in ZO2.")
+                raise NotImplementedError(f"Model '{orig_class.__name__}' is not supported in ZO2. Currently, ZO2 only supports {[model_class.__name__ for model_class in _zo2_supported_models.keys()]}")
         yield
     finally:
         for orig_class, get_zo2_class in _zo2_supported_models.items():
