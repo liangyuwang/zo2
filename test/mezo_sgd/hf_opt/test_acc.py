@@ -17,7 +17,8 @@ from utils import (
 )
 
 def train_mezo_sgd_causalLM(model_config, zo_config, device='cuda'):
-    model = zo.OPTForCausalLM(model_config, zo_config).to(device)
+    model = zo.OPTForCausalLM(model_config).to(device)
+    model.zo_init(zo_config)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
     input_ids, labels = prepare_data_for_causalLM(
@@ -29,7 +30,8 @@ def train_mezo_sgd_causalLM(model_config, zo_config, device='cuda'):
         tqdm.write(res.format(i, loss, model.opt.projected_grad))
 
 def train_mezo2_sgd_causalLM(model_config, zo_config, device='cuda'):
-    model = zo2.OPTForCausalLM(model_config, zo_config)
+    model = zo2.OPTForCausalLM(model_config)
+    model.zo_init(zo_config)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
     input_ids, labels = prepare_data_for_causalLM(
@@ -42,7 +44,8 @@ def train_mezo2_sgd_causalLM(model_config, zo_config, device='cuda'):
 
 
 def train_mezo_sgd_sequence_classification(model_config, zo_config, device='cuda'):
-    model = zo.OPTForSequenceClassification(model_config, zo_config).to(device)
+    model = zo.OPTForSequenceClassification(model_config).to(device)
+    model.zo_init(zo_config)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
     input_ids, labels = prepare_data_for_sequence_classification(
@@ -54,7 +57,8 @@ def train_mezo_sgd_sequence_classification(model_config, zo_config, device='cuda
         tqdm.write(res.format(i, loss, model.opt.projected_grad))
 
 def train_mezo2_sgd_sequence_classification(model_config, zo_config, device='cuda'):
-    model = zo2.OPTForSequenceClassification(model_config, zo_config).to(device)
+    model = zo2.OPTForSequenceClassification(model_config).to(device)
+    model.zo_init(zo_config)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
     input_ids, labels = prepare_data_for_sequence_classification(
@@ -67,7 +71,8 @@ def train_mezo2_sgd_sequence_classification(model_config, zo_config, device='cud
 
 
 def train_mezo_sgd_question_answering(model_config, zo_config, device='cuda'):
-    model = zo.OPTForQuestionAnswering(model_config, zo_config).to("cuda")
+    model = zo.OPTForQuestionAnswering(model_config).to("cuda")
+    model.zo_init(zo_config)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
     input_ids, start_positions, end_positions = prepare_data_for_question_answering(
@@ -79,7 +84,8 @@ def train_mezo_sgd_question_answering(model_config, zo_config, device='cuda'):
         tqdm.write(res.format(i, loss, model.opt.projected_grad))
 
 def train_mezo2_sgd_question_answering(model_config, zo_config, device='cuda'):
-    model = zo2.OPTForQuestionAnswering(model_config, zo_config).to("cuda")
+    model = zo2.OPTForQuestionAnswering(model_config).to("cuda")
+    model.zo_init(zo_config)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
     input_ids, start_positions, end_positions = prepare_data_for_question_answering(

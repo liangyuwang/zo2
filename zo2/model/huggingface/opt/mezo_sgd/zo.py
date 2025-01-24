@@ -31,8 +31,10 @@ logger = logging.get_logger(__name__)
 
 
 class OPTForCausalLM(modeling_opt.OPTForCausalLM):
-    def __init__(self, config: OPTConfig, zo_config: MeZOSGDConfig, zo_training=True):
+    def __init__(self, config: OPTConfig):
         super().__init__(config)
+
+    def zo_init(self, zo_config, zo_training=True):
         self.zo_training = zo_training
         self.opt = OptimizerOPTForCausalLM(model=self, config=zo_config)
 
@@ -137,8 +139,10 @@ class OPTForCausalLM(modeling_opt.OPTForCausalLM):
 
 
 class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification):
-    def __init__(self, config: OPTConfig, zo_config: MeZOSGDConfig, zo_training=True):
+    def __init__(self, config: OPTConfig):
         super().__init__(config)
+
+    def zo_init(self, zo_config, zo_training=True):
         self.zo_training = zo_training
         self.opt = OptimizerOPTForSequenceClassification(model=self, config=zo_config)
 
@@ -182,8 +186,10 @@ class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification):
 
 
 class OPTForQuestionAnswering(modeling_opt.OPTForQuestionAnswering):
-    def __init__(self, config: OPTConfig, zo_config: MeZOSGDConfig, zo_training=True):
+    def __init__(self, config: OPTConfig):
         super().__init__(config)
+    
+    def zo_init(self, zo_config, zo_training=True):
         self.zo_training = zo_training
         self.opt = OptimizerOPTForQuestionAnswering(model=self, config=zo_config)
 
@@ -312,18 +318,6 @@ class OptimizerOPTForCausalLM(MeZOSGD):
         if self.model.zo_training:
             return loss.detach()
 
-        if not return_dict:
-            output = (logits,) + outputs[1:]
-            return (loss,) + output if loss is not None else output
-
-        return CausalLMOutputWithPast(
-            loss=loss,
-            logits=logits,
-            past_key_values=outputs.past_key_values,
-            hidden_states=outputs.hidden_states,
-            attentions=outputs.attentions,
-        )
-
 
 class OptimizerOPTForSequenceClassification(MeZOSGD):
 
@@ -407,18 +401,6 @@ class OptimizerOPTForSequenceClassification(MeZOSGD):
         if self.model.zo_training:
             return loss.detach()
         
-        if not return_dict:
-            output = (pooled_logits,) + transformer_outputs[1:]
-            return ((loss,) + output) if loss is not None else output
-
-        return SequenceClassifierOutputWithPast(
-            loss=loss,
-            logits=pooled_logits,
-            past_key_values=transformer_outputs.past_key_values,
-            hidden_states=transformer_outputs.hidden_states,
-            attentions=transformer_outputs.attentions,
-        )
-
 
 class OptimizerOPTForQuestionAnswering(MeZOSGD):
     
@@ -482,14 +464,3 @@ class OptimizerOPTForQuestionAnswering(MeZOSGD):
         if self.model.zo_training:
             return total_loss.detach()
         
-        if not return_dict:
-            output = (start_logits, end_logits) + transformer_outputs[2:]
-            return ((total_loss,) + output) if total_loss is not None else output
-
-        return QuestionAnsweringModelOutput(
-            loss=total_loss,
-            start_logits=start_logits,
-            end_logits=end_logits,
-            hidden_states=transformer_outputs.hidden_states,
-            attentions=transformer_outputs.attentions,
-        )

@@ -42,8 +42,10 @@ logger = logging.get_logger(__name__)
 
 
 class OPTDecoder(modeling_opt.OPTDecoder):
-    def __init__(self, config: OPTConfig, zo_config: MeZOSGDConfig, zo_training=True):
+    def __init__(self, config: OPTConfig):
         super().__init__(config)
+    
+    def zo_init(self, zo_config, zo_training=True):
         # Initialize ZO2
         self.zo_training = zo_training
         self.opt = OptimizerOPTDecoder(model=self, config=zo_config)
@@ -71,11 +73,14 @@ class OPTDecoder(modeling_opt.OPTDecoder):
 
 
 class OPTModel(modeling_opt.OPTModel, OPTPreTrainedModel):
-    def __init__(self, config: OPTConfig, zo_config: MeZOSGDConfig, zo_training=True):
+    def __init__(self, config: OPTConfig):
         OPTPreTrainedModel.__init__(self, config)
-        self.decoder = OPTDecoder(config, zo_config)
+        self.decoder = OPTDecoder(config)
         # Initialize weights and apply final processing
         self.post_init()
+    
+    def zo_init(self, zo_config, zo_training=True):
+        self.decoder.zo_init(zo_config, zo_training)
         # Initialize ZO2
         self.zo_training = zo_training
         self.opt = OptimizerOPTModel(model=self, config=zo_config)
@@ -110,13 +115,16 @@ class OPTModel(modeling_opt.OPTModel, OPTPreTrainedModel):
 
 
 class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel):
-    def __init__(self, config: OPTConfig, zo_config: MeZOSGDConfig, zo_training=True):
+    def __init__(self, config: OPTConfig):
         OPTPreTrainedModel.__init__(self, config)
-        self.model = OPTModel(config, zo_config)
+        self.model = OPTModel(config)
         # the lm_head weight is automatically tied to the embed tokens weight
         self.lm_head = nn.Linear(config.word_embed_proj_dim, config.vocab_size, bias=False)
         # Initialize weights and apply final processing
         self.post_init()
+    
+    def zo_init(self, zo_config, zo_training=True):
+        self.model.zo_init(zo_config, zo_training)
         # Initialize ZO2
         self.zo_training = zo_training
         self.opt = OptimizerOPTForCausalLM(model=self, config=zo_config)
@@ -222,15 +230,17 @@ class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel):
 
 
 class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, OPTPreTrainedModel):
-    def __init__(self, config: OPTConfig, zo_config: MeZOSGDConfig, zo_training=True):
+    def __init__(self, config: OPTConfig):
         OPTPreTrainedModel.__init__(self, config)
         self.num_labels = config.num_labels
-        self.model = OPTModel(config, zo_config)
+        self.model = OPTModel(config)
         self.score = nn.Linear(config.word_embed_proj_dim, self.num_labels, bias=False)
 
         # Initialize weights and apply final processing
         self.post_init()
 
+    def zo_init(self, zo_config, zo_training=True):
+        self.model.zo_init(zo_config, zo_training)
         self.zo_training = zo_training
         self.opt = OptimizerOPTForSequenceClassification(model=self, config=zo_config)
 
@@ -274,13 +284,16 @@ class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, OP
 
 
 class OPTForQuestionAnswering(modeling_opt.OPTForQuestionAnswering, OPTPreTrainedModel):
-    def __init__(self, config: OPTConfig, zo_config: MeZOSGDConfig, zo_training=True):
+    def __init__(self, config: OPTConfig):
         OPTPreTrainedModel.__init__(self, config)
-        self.model = OPTModel(config, zo_config)
+        self.model = OPTModel(config)
         self.qa_outputs = nn.Linear(config.word_embed_proj_dim, 2)
 
         # Initialize weights and apply final processing
         self.post_init()
+
+    def zo_init(self, zo_config, zo_training=True):
+        self.model.zo_init(zo_config, zo_training)
         self.zo_training = zo_training
         self.opt = OptimizerOPTForQuestionAnswering(model=self, config=zo_config)
 
@@ -357,6 +370,17 @@ class OPTForQuestionAnswering(modeling_opt.OPTForQuestionAnswering, OPTPreTraine
 
 class OptimizerOPTDecoder(MeZO2SGD):
 
+    def init_zo2(self):
+        self.upload_stream = None
+        self.offload_stream = None
+        self.compute_stream = None
+        self.zo_random_seed = None
+        self.rstate = None
+        self.rstate_queue = None
+        self.last_rstate = None
+        self.projected_grad = None
+        self.init_zo2_upload()
+    
     def init_zo2_upload(self):
         self.model.embed_tokens = self.model.embed_tokens.to(self.device)
         self.model.embed_positions = self.model.embed_positions.to(self.device)
@@ -628,6 +652,17 @@ class OptimizerOPTDecoder(MeZO2SGD):
 
 class OptimizerOPTModel(MeZO2SGD):
 
+    def init_zo2(self):
+        self.upload_stream = None
+        self.offload_stream = None
+        self.compute_stream = None
+        self.zo_random_seed = None
+        self.rstate = None
+        self.rstate_queue = None
+        self.last_rstate = None
+        self.projected_grad = None
+        self.init_zo2_upload()
+    
     def init_zo2_upload(self):
         ...
     

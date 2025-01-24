@@ -18,22 +18,21 @@ _zo2_supported_models = {
 
 @contextmanager
 def zo2_hf_init(zo_config):
-    original_models = {}
     try:
         for orig_class, get_zo2_class in _zo2_supported_models.items():
             if hasattr(transformers, orig_class.__name__):
-                original_models[orig_class] = getattr(transformers, orig_class.__name__)
-                setattr(transformers, orig_class.__name__, get_zo2_class(zo_config))
+                zo2_class = get_zo2_class(zo_config)
+                setattr(transformers, orig_class.__name__, zo2_class)
             else:
-                raise NotImplementedError(f"Model '{orig_class.__name__}' is not supported in ZO2. Currently, ZO2 only supports {[model_class.__name__ for model_class in _zo2_supported_models.keys()]}")
+                raise NotImplementedError(f"Model '{orig_class.__name__}' is not supported in transformers.")
         yield
     finally:
-        for orig_class, get_zo2_class in _zo2_supported_models.items():
-            setattr(transformers, orig_class.__name__, original_models[orig_class])
+        pass
 
 def main():
     # user api:
-    from transformers import OPTForCausalLM
     with zo2_hf_init(zo_config):
+        from transformers import OPTForCausalLM
         model = OPTForCausalLM.from_pretrained(...)
+    model.zo_init(zo_config)
     print(type(model))  # should be zo2.OPTForCausalLM
