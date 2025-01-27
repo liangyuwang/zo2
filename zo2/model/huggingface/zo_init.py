@@ -17,7 +17,7 @@ _zo2_supported_models = {
 }
 
 @contextmanager
-def zo2_hf_init(zo_config):
+def zo_hf_init(zo_config):
     try:
         for orig_class, get_zo2_class in _zo2_supported_models.items():
             if hasattr(transformers, orig_class.__name__):
@@ -31,8 +31,8 @@ def zo2_hf_init(zo_config):
 
 def main():
     # user api:
-    with zo2_hf_init(zo_config):
+    with zo_hf_init(zo_config):
         from transformers import OPTForCausalLM
         model = OPTForCausalLM.from_pretrained(...)
-    model.zo_init(zo_config)
+        model.zo_init(zo_config)
     print(type(model))  # should be zo2.OPTForCausalLM
