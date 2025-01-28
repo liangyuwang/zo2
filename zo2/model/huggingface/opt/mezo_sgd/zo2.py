@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
-from transformers.models.llama import modeling_llama
 from transformers.models.opt import modeling_opt
 from transformers.models.opt.modeling_opt import (
     OPTConfig,
