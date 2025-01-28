@@ -3,14 +3,14 @@ import torch.nn.functional as F
 import numpy as np
 
 from .. import model
+from ...base import BaseZOModel
 from ....optimizer.mezo_sgd.zo2 import MeZO2SGD
 from ....config.mezo_sgd import MeZOSGDConfig
 
 
-class GPT(model.GPT):
-    def __init__(self, config: model.GPTConfig, zo_config: MeZOSGDConfig, zo_training=True):
+class GPT(model.GPT, BaseZOModel):
+    def __init__(self, config: model.GPTConfig, zo_config: MeZOSGDConfig):
         super().__init__(config)
-        self.zo_training = zo_training
         self.opt = Optimizer(model=self, config=zo_config)
 
     def forward(self, idx, pos, targets=None):

@@ -23,8 +23,8 @@ def train_mezo_sgd_causalLM(model_config, zo_config, device='cuda'):
     print(f"model size: {total_parameters/1024**3:.2f} B")
     input_ids, labels = prepare_data_for_causalLM(
         model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
-    model.eval()
     for i in tqdm(range(args.max_steps)):
+        model.zo_train()
         loss = model(input_ids=input_ids, labels=labels)
         res = "Iteration {}, loss: {}, projected grad: {}"
         tqdm.write(res.format(i, loss, model.opt.projected_grad))
@@ -36,8 +36,8 @@ def train_mezo2_sgd_causalLM(model_config, zo_config, device='cuda'):
     print(f"model size: {total_parameters/1024**3:.2f} B")
     input_ids, labels = prepare_data_for_causalLM(
         model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
-    model.eval()
     for i in tqdm(range(args.max_steps)):
+        model.zo_train()
         loss = model(input_ids=input_ids, labels=labels)
         res = "Iteration {}, loss: {}, projected grad: {}"
         tqdm.write(res.format(i, loss, model.opt.projected_grad))
@@ -50,8 +50,8 @@ def train_mezo_sgd_sequence_classification(model_config, zo_config, device='cuda
     print(f"model size: {total_parameters/1024**3:.2f} B")
     input_ids, labels = prepare_data_for_sequence_classification(
         model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
-    model.eval()
     for i in tqdm(range(args.max_steps)):
+        model.zo_train()
         loss = model(input_ids=input_ids, labels=labels)
         res = "Iteration {}, loss: {}, projected grad: {}"
         tqdm.write(res.format(i, loss, model.opt.projected_grad))
@@ -63,8 +63,8 @@ def train_mezo2_sgd_sequence_classification(model_config, zo_config, device='cud
     print(f"model size: {total_parameters/1024**3:.2f} B")
     input_ids, labels = prepare_data_for_sequence_classification(
         model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
-    model.eval()
     for i in tqdm(range(args.max_steps)):
+        model.zo_train()
         loss = model(input_ids=input_ids, labels=labels)
         res = "Iteration {}, loss: {}, projected grad: {}"
         tqdm.write(res.format(i, loss, model.opt.projected_grad))
@@ -77,8 +77,8 @@ def train_mezo_sgd_question_answering(model_config, zo_config, device='cuda'):
     print(f"model size: {total_parameters/1024**3:.2f} B")
     input_ids, start_positions, end_positions = prepare_data_for_question_answering(
         model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
-    model.eval()
     for i in tqdm(range(args.max_steps)):
+        model.zo_train()
         loss = model(input_ids=input_ids, start_positions=start_positions, end_positions=end_positions)
         res = "Iteration {}, loss: {}, projected grad: {}"
         tqdm.write(res.format(i, loss, model.opt.projected_grad))
@@ -90,8 +90,8 @@ def train_mezo2_sgd_question_answering(model_config, zo_config, device='cuda'):
     print(f"model size: {total_parameters/1024**3:.2f} B")
     input_ids, start_positions, end_positions = prepare_data_for_question_answering(
         model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
-    model.eval()
     for i in tqdm(range(args.max_steps)):
+        model.zo_train()
         loss = model(input_ids=input_ids, start_positions=start_positions, end_positions=end_positions)
         res = "Iteration {}, loss: {}, projected grad: {}"
         tqdm.write(res.format(i, loss, model.opt.projected_grad))

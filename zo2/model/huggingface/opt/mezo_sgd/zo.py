@@ -24,18 +24,18 @@ from transformers.utils import logging
 
 from typing import List, Optional, Tuple, Union
 
+from ....base import BaseZOModel
 from .....optimizer.mezo_sgd.zo import MeZOSGD
 from .....config.mezo_sgd import MeZOSGDConfig
 
 logger = logging.get_logger(__name__)
 
 
-class OPTForCausalLM(modeling_opt.OPTForCausalLM):
+class OPTForCausalLM(modeling_opt.OPTForCausalLM, BaseZOModel):
     def __init__(self, config: OPTConfig):
         super().__init__(config)
 
-    def zo_init(self, zo_config, zo_training=True):
-        self.zo_training = zo_training
+    def zo_init(self, zo_config):
         self.opt = OptimizerOPTForCausalLM(model=self, config=zo_config)
 
     @replace_return_docstrings(output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
@@ -138,12 +138,11 @@ class OPTForCausalLM(modeling_opt.OPTForCausalLM):
                 output_attentions, output_hidden_states, return_dict)
 
 
-class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification):
+class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, BaseZOModel):
     def __init__(self, config: OPTConfig):
         super().__init__(config)
 
-    def zo_init(self, zo_config, zo_training=True):
-        self.zo_training = zo_training
+    def zo_init(self, zo_config):
         self.opt = OptimizerOPTForSequenceClassification(model=self, config=zo_config)
 
     @add_start_docstrings_to_model_forward(OPT_INPUTS_DOCSTRING)
@@ -185,12 +184,11 @@ class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification):
                 output_attentions, output_hidden_states, return_dict)
 
 
-class OPTForQuestionAnswering(modeling_opt.OPTForQuestionAnswering):
+class OPTForQuestionAnswering(modeling_opt.OPTForQuestionAnswering, BaseZOModel):
     def __init__(self, config: OPTConfig):
         super().__init__(config)
     
-    def zo_init(self, zo_config, zo_training=True):
-        self.zo_training = zo_training
+    def zo_init(self, zo_config):
         self.opt = OptimizerOPTForQuestionAnswering(model=self, config=zo_config)
 
     @add_start_docstrings_to_model_forward(OPT_INPUTS_DOCSTRING)

@@ -13,11 +13,11 @@ from utils import model_size, prepare_data, get_args
 def train_mezo_sgd(model, args, model_config, device='cuda'):
     seed_everything(args.seed)
     total_parameters = model_size(model)["total"]
-    model.eval()
     print(f"model size: {total_parameters/1024**3:.2f} B")
     print("Init dataset")
     input_ids, pos, labels = prepare_data(model_config.vocab_size, args.batch_size, model_config.block_size, device=device)
     for i in tqdm(range(args.max_steps)):
+        model.zo_train()
         loss = model(input_ids, pos, labels)
         res = "Iteration {}, loss: {}, projected grad: {}"
         tqdm.write(res.format(i, loss, model.opt.projected_grad))
@@ -28,8 +28,8 @@ def train_mezo2_sgd(model, args, model_config, device='cuda'):
     print(f"model size: {total_parameters/1024**3:.2f} B")
     print("Init dataset")
     input_ids, pos, labels = prepare_data(model_config.vocab_size, args.batch_size, model_config.block_size, device=device)
-    model.eval()
     for i in tqdm(range(args.max_steps)):
+        model.zo_train()
         loss = model(input_ids, pos, labels)
         res = "Iteration {}, loss: {}, projected grad: {}"
         tqdm.write(res.format(i, loss, model.opt.projected_grad))

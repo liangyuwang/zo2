@@ -27,6 +27,7 @@ from transformers.utils import logging
 
 from typing import List, Optional, Tuple, Union
 
+from ....base import BaseZOModel
 from .....optimizer.mezo_sgd.zo2 import MeZO2SGD
 from .....config.mezo_sgd import MeZOSGDConfig
 from .utils import (
@@ -41,13 +42,12 @@ from .utils import (
 logger = logging.get_logger(__name__)
 
 
-class OPTDecoder(modeling_opt.OPTDecoder):
+class OPTDecoder(modeling_opt.OPTDecoder, BaseZOModel):
     def __init__(self, config: OPTConfig):
         super().__init__(config)
     
-    def zo_init(self, zo_config, zo_training=True):
+    def zo_init(self, zo_config):
         # Initialize ZO2
-        self.zo_training = zo_training
         self.opt = OptimizerOPTDecoder(model=self, config=zo_config)
     
     def forward(
@@ -72,17 +72,17 @@ class OPTDecoder(modeling_opt.OPTDecoder):
                 output_attentions, output_hidden_states, return_dict)
 
 
-class OPTModel(modeling_opt.OPTModel, OPTPreTrainedModel):
+class OPTModel(modeling_opt.OPTModel, OPTPreTrainedModel, BaseZOModel):
     def __init__(self, config: OPTConfig):
         OPTPreTrainedModel.__init__(self, config)
+        BaseZOModel.__init__(self)
         self.decoder = OPTDecoder(config)
         # Initialize weights and apply final processing
         self.post_init()
     
-    def zo_init(self, zo_config, zo_training=True):
-        self.decoder.zo_init(zo_config, zo_training)
+    def zo_init(self, zo_config):
+        self.decoder.zo_init(zo_config)
         # Initialize ZO2
-        self.zo_training = zo_training
         self.opt = OptimizerOPTModel(model=self, config=zo_config)
 
     @add_start_docstrings_to_model_forward(OPT_INPUTS_DOCSTRING)
@@ -114,19 +114,19 @@ class OPTModel(modeling_opt.OPTModel, OPTPreTrainedModel):
                 output_attentions, output_hidden_states, return_dict)
 
 
-class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel):
+class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel, BaseZOModel):
     def __init__(self, config: OPTConfig):
         OPTPreTrainedModel.__init__(self, config)
+        BaseZOModel.__init__(self)
         self.model = OPTModel(config)
         # the lm_head weight is automatically tied to the embed tokens weight
         self.lm_head = nn.Linear(config.word_embed_proj_dim, config.vocab_size, bias=False)
         # Initialize weights and apply final processing
         self.post_init()
     
-    def zo_init(self, zo_config, zo_training=True):
-        self.model.zo_init(zo_config, zo_training)
+    def zo_init(self, zo_config):
+        self.model.zo_init(zo_config)
         # Initialize ZO2
-        self.zo_training = zo_training
         self.opt = OptimizerOPTForCausalLM(model=self, config=zo_config)
 
     @replace_return_docstrings(output_type=CausalLMOutputWithPast, config_class=_CONFIG_FOR_DOC)
@@ -229,9 +229,10 @@ class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel):
                 output_attentions, output_hidden_states, return_dict)
 
 
-class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, OPTPreTrainedModel):
+class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, OPTPreTrainedModel, BaseZOModel):
     def __init__(self, config: OPTConfig):
         OPTPreTrainedModel.__init__(self, config)
+        BaseZOModel.__init__(self)
         self.num_labels = config.num_labels
         self.model = OPTModel(config)
         self.score = nn.Linear(config.word_embed_proj_dim, self.num_labels, bias=False)
@@ -239,9 +240,8 @@ class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, OP
         # Initialize weights and apply final processing
         self.post_init()
 
-    def zo_init(self, zo_config, zo_training=True):
-        self.model.zo_init(zo_config, zo_training)
-        self.zo_training = zo_training
+    def zo_init(self, zo_config):
+        self.model.zo_init(zo_config)
         self.opt = OptimizerOPTForSequenceClassification(model=self, config=zo_config)
 
     @add_start_docstrings_to_model_forward(OPT_INPUTS_DOCSTRING)
@@ -283,18 +283,18 @@ class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, OP
                 output_attentions, output_hidden_states, return_dict)
 
 
-class OPTForQuestionAnswering(modeling_opt.OPTForQuestionAnswering, OPTPreTrainedModel):
+class OPTForQuestionAnswering(modeling_opt.OPTForQuestionAnswering, OPTPreTrainedModel, BaseZOModel):
     def __init__(self, config: OPTConfig):
         OPTPreTrainedModel.__init__(self, config)
+        BaseZOModel.__init__(self)
         self.model = OPTModel(config)
         self.qa_outputs = nn.Linear(config.word_embed_proj_dim, 2)
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def zo_init(self, zo_config, zo_training=True):
-        self.model.zo_init(zo_config, zo_training)
-        self.zo_training = zo_training
+    def zo_init(self, zo_config):
+        self.model.zo_init(zo_config)
         self.opt = OptimizerOPTForQuestionAnswering(model=self, config=zo_config)
 
     @add_start_docstrings_to_model_forward(OPT_INPUTS_DOCSTRING)

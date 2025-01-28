@@ -13,7 +13,6 @@ from utils import model_size, prepare_data, get_args, check_throughput
 def train_mezo_sgd(model, args, modelConfig, device='cuda'):
     seed_everything(args.seed)
     total_parameters = model_size(model)["total"]
-    model.eval()
     print(f"model size: {total_parameters/1024**3:.2f} B")
     print("Init dataset")
     input_ids, pos, labels = prepare_data(modelConfig.vocab_size, args.batch_size, modelConfig.block_size, device=device)
@@ -26,7 +25,6 @@ def train_mezo2_sgd(model, args, modelConfig, device='cuda'):
     print(f"model size: {total_parameters/1024**3:.2f} B")
     print("Init dataset")
     input_ids, pos, labels = prepare_data(modelConfig.vocab_size, args.batch_size, modelConfig.block_size, device=device)
-    model.eval()
     for i in tqdm(range(args.max_steps)):
         check_throughput(i, args.batch_size, model, input_ids, pos, labels, use_tqdm=True)
 
