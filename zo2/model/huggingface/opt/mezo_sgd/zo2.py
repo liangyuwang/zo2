@@ -7,6 +7,8 @@ from transformers.models.opt import modeling_opt
 from transformers.models.opt.modeling_opt import (
     OPTConfig,
     OPTPreTrainedModel,
+    OPTLearnedPositionalEmbedding,
+    OPTDecoderLayer,
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
     SequenceClassifierOutputWithPast,
@@ -41,9 +43,53 @@ from .utils import (
 logger = logging.get_logger(__name__)
 
 
-class OPTDecoder(modeling_opt.OPTDecoder, BaseZOModel):
+class OPTDecoder(modeling_opt.OPTDecoder, OPTPreTrainedModel, BaseZOModel):
+    """
+    Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`OPTDecoderLayer`]
+    
+    Args:
+        config: OPTConfig
+    """
+
     def __init__(self, config: OPTConfig):
-        super().__init__(config)
+        """
+        !!! Module register must follow the execution order.
+        """
+        OPTPreTrainedModel.__init__(self, config)
+        self.dropout = config.dropout
+        self.layerdrop = config.layerdrop
+        self.padding_idx = config.pad_token_id
+        self.max_target_positions = config.max_position_embeddings
+        self.vocab_size = config.vocab_size
+
+        self.embed_tokens = nn.Embedding(config.vocab_size, config.word_embed_proj_dim, self.padding_idx)
+        self.embed_positions = OPTLearnedPositionalEmbedding(config.max_position_embeddings, config.hidden_size)
+
+        if config.word_embed_proj_dim != config.hidden_size:
+            self.project_in = nn.Linear(config.word_embed_proj_dim, config.hidden_size, bias=False)
+        else:
+            self.project_in = None
+
+        self.layers = nn.ModuleList([OPTDecoderLayer(config) for _ in range(config.num_hidden_layers)])
+
+        # Note that the only purpose of `config._remove_final_layer_norm` is to keep backward compatibility
+        # with checkpoints that have been fine-tuned before transformers v4.20.1
+        # see https://github.com/facebookresearch/metaseq/pull/164
+        if config.do_layer_norm_before and not config._remove_final_layer_norm:
+            self.final_layer_norm = nn.LayerNorm(
+                config.hidden_size, elementwise_affine=config.layer_norm_elementwise_affine
+            )
+        else:
+            self.final_layer_norm = None
+
+        if config.word_embed_proj_dim != config.hidden_size:
+            self.project_out = nn.Linear(config.hidden_size, config.word_embed_proj_dim, bias=False)
+        else:
+            self.project_out = None
+
+        self.gradient_checkpointing = False
+        # Initialize weights and apply final processing
+        self.post_init()
     
     def zo_init(self, zo_config):
         # Initialize ZO2

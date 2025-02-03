@@ -5,6 +5,9 @@ from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from transformers.models.opt import modeling_opt
 from transformers.models.opt.modeling_opt import (
     OPTConfig,
+    OPTPreTrainedModel,
+    OPTLearnedPositionalEmbedding,
+    OPTDecoderLayer,
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
     SequenceClassifierOutputWithPast,
@@ -31,9 +34,77 @@ from .....config.mezo_sgd import MeZOSGDConfig
 logger = logging.get_logger(__name__)
 
 
-class OPTForCausalLM(modeling_opt.OPTForCausalLM, BaseZOModel):
+
+class OPTDecoder(modeling_opt.OPTDecoder, OPTPreTrainedModel):
+    """
+    Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`OPTDecoderLayer`]
+    
+    Args:
+        config: OPTConfig
+    """
+
     def __init__(self, config: OPTConfig):
-        super().__init__(config)
+        """
+        !!! Module register must follow the execution order.
+        """
+        OPTPreTrainedModel.__init__(self, config)
+        self.dropout = config.dropout
+        self.layerdrop = config.layerdrop
+        self.padding_idx = config.pad_token_id
+        self.max_target_positions = config.max_position_embeddings
+        self.vocab_size = config.vocab_size
+
+        self.embed_tokens = nn.Embedding(config.vocab_size, config.word_embed_proj_dim, self.padding_idx)
+        self.embed_positions = OPTLearnedPositionalEmbedding(config.max_position_embeddings, config.hidden_size)
+
+        if config.word_embed_proj_dim != config.hidden_size:
+            self.project_in = nn.Linear(config.word_embed_proj_dim, config.hidden_size, bias=False)
+        else:
+            self.project_in = None
+
+        self.layers = nn.ModuleList([OPTDecoderLayer(config) for _ in range(config.num_hidden_layers)])
+
+        # Note that the only purpose of `config._remove_final_layer_norm` is to keep backward compatibility
+        # with checkpoints that have been fine-tuned before transformers v4.20.1
+        # see https://github.com/facebookresearch/metaseq/pull/164
+        if config.do_layer_norm_before and not config._remove_final_layer_norm:
+            self.final_layer_norm = nn.LayerNorm(
+                config.hidden_size, elementwise_affine=config.layer_norm_elementwise_affine
+            )
+        else:
+            self.final_layer_norm = None
+
+        if config.word_embed_proj_dim != config.hidden_size:
+            self.project_out = nn.Linear(config.hidden_size, config.word_embed_proj_dim, bias=False)
+        else:
+            self.project_out = None
+
+        self.gradient_checkpointing = False
+        # Initialize weights and apply final processing
+        self.post_init()
+
+
+class OPTModel(modeling_opt.OPTModel, OPTPreTrainedModel):
+    def __init__(self, config: OPTConfig):
+        OPTPreTrainedModel.__init__(self, config)
+        self.decoder = OPTDecoder(config)
+        # Initialize weights and apply final processing
+        self.post_init()
+
+
+class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel, BaseZOModel):
+    _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
+
+    def __init__(self, config: OPTConfig):
+        OPTPreTrainedModel.__init__(self, config)
+        BaseZOModel.__init__(self)
+        self.model = OPTModel(config)
+
+        # the lm_head weight is automatically tied to the embed tokens weight
+        self.lm_head = nn.Linear(config.word_embed_proj_dim, config.vocab_size, bias=False)
+
+        # Initialize weights and apply final processing
+        self.post_init()
 
     def zo_init(self, zo_config):
         self.opt = OptimizerOPTForCausalLM(model=self, config=zo_config)
@@ -138,9 +209,18 @@ class OPTForCausalLM(modeling_opt.OPTForCausalLM, BaseZOModel):
                 output_attentions, output_hidden_states, return_dict)
 
 
-class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, BaseZOModel):
+class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, OPTPreTrainedModel, BaseZOModel):
+    _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
+
     def __init__(self, config: OPTConfig):
-        super().__init__(config)
+        OPTPreTrainedModel.__init__(self, config)
+        BaseZOModel.__init__(self)
+        self.num_labels = config.num_labels
+        self.model = OPTModel(config)
+        self.score = nn.Linear(config.word_embed_proj_dim, self.num_labels, bias=False)
+
+        # Initialize weights and apply final processing
+        self.post_init()
 
     def zo_init(self, zo_config):
         self.opt = OptimizerOPTForSequenceClassification(model=self, config=zo_config)
@@ -184,9 +264,17 @@ class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, Ba
                 output_attentions, output_hidden_states, return_dict)
 
 
-class OPTForQuestionAnswering(modeling_opt.OPTForQuestionAnswering, BaseZOModel):
+class OPTForQuestionAnswering(modeling_opt.OPTForQuestionAnswering, OPTPreTrainedModel, BaseZOModel):
+    _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
+
     def __init__(self, config: OPTConfig):
-        super().__init__(config)
+        OPTPreTrainedModel.__init__(self, config)
+        BaseZOModel.__init__(self)
+        self.model = OPTModel(config)
+        self.qa_outputs = nn.Linear(config.word_embed_proj_dim, 2)
+
+        # Initialize weights and apply final processing
+        self.post_init()
     
     def zo_init(self, zo_config):
         self.opt = OptimizerOPTForQuestionAnswering(model=self, config=zo_config)
