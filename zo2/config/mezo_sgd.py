@@ -11,6 +11,7 @@ class MeZOSGDConfig:
     weight_decay: float = 1e-1
     eps: float = 1e-3
     max_zo_random_seed = 1000000000
+    debug_mode: bool = False    # set 'True' to disable random noise
 
     # zo2 config
     zo2: bool = True    # use offloading or not

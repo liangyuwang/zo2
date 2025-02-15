@@ -91,7 +91,8 @@ class Optimizer(MeZO2SGD):
         logits1, logits2 = self.task_compute_module(self.model.transformer.ln_f,
                                              inputs1={"input": hidden_states1}, 
                                              inputs2={"input": hidden_states2}, 
-                                             grad=self.projected_grad)
+                                             grad=self.projected_grad,
+                                             weight_decay=0.)
         logits1, logits2 = self.task_compute_module(self.model.lm_head,
                                              inputs1={"input": logits1}, 
                                              inputs2={"input": logits2}, 

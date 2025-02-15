@@ -25,6 +25,7 @@ class MeZO2SGD(MeZOSGD):
         self.max_zo_random_seed = config.max_zo_random_seed
         self.overlap = config.overlap
         self.offloading_blocks = config.offloading_blocks
+        self.debug_mode = config.debug_mode
         self.init_zo2()
     
     def init_zo2(self):
@@ -50,16 +51,16 @@ class MeZO2SGD(MeZOSGD):
             setattr(target, attr, getattr(source, attr))
     
     @torch.inference_mode
-    def zo_update(self, module):
+    def zo_update(self, module, weight_decay=None):
         torch.cuda.set_rng_state(self.last_rstate)
-        super().zo_update(module)
+        super().zo_update(module, weight_decay=weight_decay)
         self.last_rstate = torch.cuda.get_rng_state()
         return module
     
     @torch.inference_mode()
-    def module_dual_forward(self, module, inputs1, inputs2, projected_grad=0.):
+    def module_dual_forward(self, module, inputs1, inputs2, projected_grad=0., weight_decay=False):
         if projected_grad != 0:
-            module = self.zo_update(module)
+            module = self.zo_update(module, weight_decay)
         torch.cuda.set_rng_state(self.rstate)
         self.zo_perturb_parameters(module, scaling_factor=1)
         output1 = module(**inputs1)
@@ -113,7 +114,7 @@ class MeZO2SGD(MeZOSGD):
             module = module.to(device)
         return module
     
-    def task_compute_module(self, module, inputs1, inputs2, grad):
+    def task_compute_module(self, module, inputs1, inputs2, grad, weight_decay=False):
         if self.overlap:
             self.compute_stream.synchronize()
             self.upload_stream.synchronize()   # module compute depends on upload task
@@ -122,13 +123,15 @@ class MeZO2SGD(MeZOSGD):
                     module=module, 
                     inputs1=inputs1, 
                     inputs2=inputs2,
-                    projected_grad=grad)
+                    projected_grad=grad,
+                    weight_decay=weight_decay)
         else:
             o1, o2 = self.module_dual_forward(
                     module=module, 
                     inputs1=inputs1, 
                     inputs2=inputs2,
-                    projected_grad=grad)
+                    projected_grad=grad,
+                    weight_decay=weight_decay)
         return o1, o2
     
     def task_compute_function(self, fn, inputs1, inputs2):
@@ -215,7 +218,8 @@ class MeZO2SGD(MeZOSGD):
         logits1, logits2 = self.task_compute_module(self.model.transformer.ln_f,
                                              inputs1={"input": hidden_states1}, 
                                              inputs2={"input": hidden_states2}, 
-                                             grad=self.projected_grad)
+                                             grad=self.projected_grad,
+                                             weight_decay=0.)
         logits1, logits2 = self.task_compute_module(self.model.lm_head,
                                              inputs1={"input": logits1}, 
                                              inputs2={"input": logits2}, 

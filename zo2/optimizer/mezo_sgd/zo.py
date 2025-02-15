@@ -19,26 +19,37 @@ class MeZOSGD:
         self.weight_decay = config.weight_decay
         self.zo_eps = config.eps
         self.max_zo_random_seed = config.max_zo_random_seed
+        self.debug_mode = config.debug_mode
     
     @torch.inference_mode
     def zo_perturb_parameters(self, module: nn.Module, scaling_factor: float=1):       
         for _, param in module.named_parameters():
             if param.requires_grad:
-                z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
+                # Resample z
+                if self.debug_mode:
+                    z = torch.ones_like(param.data) # for debug
+                else:
+                    z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
                 param.data.add_(scaling_factor * z * self.zo_eps)
 
     @torch.inference_mode
-    def zo_update(self, module):
-
+    def zo_update(self, module, weight_decay=None):
         for name, param in module.named_parameters():
             if param.requires_grad:
                 # Resample z
-                z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
-                if all(x not in name for x in ["bias", "layer_norm", "layernorm", "ln"]):
-                    param.data.sub_(
-                        self.lr * (self.projected_grad * z + self.weight_decay * param.data))
+                if self.debug_mode:
+                    z = torch.ones_like(param.data) # for debug
                 else:
-                    param.data.sub_(self.lr * self.projected_grad * z)
+                    z = torch.normal(mean=0, std=1, size=param.data.size(), device=param.data.device, dtype=param.data.dtype)
+                if weight_decay != None:
+                    param.data.sub_(
+                        self.lr * (self.projected_grad * z + weight_decay * param.data))
+                else:
+                    if all(x not in name for x in ["bias", "layer_norm", "layernorm", "ln"]):
+                        param.data.sub_(
+                            self.lr * (self.projected_grad * z + self.weight_decay * param.data))
+                    else:
+                        param.data.sub_(self.lr * self.projected_grad * z)
     
     @torch.inference_mode
     def zo_forward(self, *args, zo_random_seed: int=None, **kwargs):
