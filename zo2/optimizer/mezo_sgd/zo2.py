@@ -58,7 +58,7 @@ class MeZO2SGD(MeZOSGD):
         return module
     
     @torch.inference_mode()
-    def module_dual_forward(self, module, inputs1, inputs2, projected_grad=0., weight_decay=False):
+    def module_dual_forward(self, module, inputs1, inputs2, projected_grad=0., weight_decay=None):
         if projected_grad != 0:
             module = self.zo_update(module, weight_decay)
         torch.cuda.set_rng_state(self.rstate)
@@ -114,7 +114,7 @@ class MeZO2SGD(MeZOSGD):
             module = module.to(device)
         return module
     
-    def task_compute_module(self, module, inputs1, inputs2, grad, weight_decay=False):
+    def task_compute_module(self, module, inputs1, inputs2, grad, weight_decay=None):
         if self.overlap:
             self.compute_stream.synchronize()
             self.upload_stream.synchronize()   # module compute depends on upload task
