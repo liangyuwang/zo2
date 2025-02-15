@@ -11,7 +11,6 @@ class MeZOSGDConfig:
     weight_decay: float = 1e-1
     eps: float = 1e-3
     max_zo_random_seed = 1000000000
-    debug_mode: bool = False    # set 'True' to disable random noise
 
     # zo2 config
     zo2: bool = True    # use offloading or not
@@ -22,3 +21,4 @@ class MeZOSGDConfig:
     amp: bool = False   # use amp or not
     precision_on_offloading_device: torch.dtype = torch.float16 # precision on offloading device, valid when using amp
     precision_on_working_device: torch.dtype = torch.float32    # precision on working device, valid when using amp
+    debug_mode: bool = False    # set 'True' to disable random noise
