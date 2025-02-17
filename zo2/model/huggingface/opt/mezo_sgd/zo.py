@@ -25,6 +25,7 @@ from transformers.models.opt.modeling_opt import (
 )
 from transformers.utils import logging
 
+import random
 from typing import List, Optional, Tuple, Union
 
 from ....base import BaseZOModel
@@ -210,8 +211,6 @@ class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel, BaseZOMode
 
 
 class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, OPTPreTrainedModel, BaseZOModel):
-    _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
-
     def __init__(self, config: OPTConfig):
         OPTPreTrainedModel.__init__(self, config)
         BaseZOModel.__init__(self)
@@ -265,8 +264,6 @@ class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, OP
 
 
 class OPTForQuestionAnswering(modeling_opt.OPTForQuestionAnswering, OPTPreTrainedModel, BaseZOModel):
-    _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
-
     def __init__(self, config: OPTConfig):
         OPTPreTrainedModel.__init__(self, config)
         BaseZOModel.__init__(self)

@@ -160,6 +160,8 @@ class OPTModel(modeling_opt.OPTModel, OPTPreTrainedModel, BaseZOModel):
 
 
 class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel, BaseZOModel):
+    _keys_to_ignore_on_load_missing = [r"lm_head.weight"]
+
     def __init__(self, config: OPTConfig):
         OPTPreTrainedModel.__init__(self, config)
         BaseZOModel.__init__(self)
@@ -669,7 +671,8 @@ class OptimizerOPTDecoder(MeZO2SGD):
                 module=self.model.final_layer_norm,
                 inputs1={"input": hidden_states1},
                 inputs2={"input": hidden_states2},
-                grad=self.projected_grad)
+                grad=self.projected_grad,
+                weight_decay=0.)
 
         if self.model.project_out is not None:
             # hidden_states = self.model.project_out(hidden_states)
@@ -734,7 +737,7 @@ class OptimizerOPTModel(MeZO2SGD):
         # decoder outputs consists of (dec_features, past_key_value, dec_hidden, dec_attn)
         self.model.decoder.zo_training = True
         self.assign_zo2_attributes(self, self.model.decoder.opt)
-        return self.model.decoder(
+        output = self.model.decoder(
             input_ids=input_ids,
             attention_mask=attention_mask,
             head_mask=head_mask,
@@ -745,6 +748,9 @@ class OptimizerOPTModel(MeZO2SGD):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
+        self.assign_zo2_attributes(self.model.decoder.opt, self)
+        
+        return output
 
         # if not return_dict:
         #     return decoder_outputs
@@ -800,6 +806,7 @@ class OptimizerOPTForCausalLM(MeZO2SGD):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
+        self.assign_zo2_attributes(self.model.model.decoder.opt, self)
 
         # logits = self.model.lm_head(outputs[0]).contiguous()
         logits1, logits2 = self.task_compute_module(self.model.lm_head,
@@ -807,7 +814,7 @@ class OptimizerOPTForCausalLM(MeZO2SGD):
                                                     inputs2={"input": hidden_states2},
                                                     grad=self.projected_grad)
 
-        # loss = None
+        # # loss = None
         if labels is not None:
             # Shift so that tokens < n predict n
             # shift_logits = logits[..., :-1, :].contiguous()
@@ -880,6 +887,8 @@ class OptimizerOPTForSequenceClassification(MeZO2SGD):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
+        self.assign_zo2_attributes(self.model.model.opt, self)
+        
         # hidden_states = transformer_outputs[0]
         # logits = self.model.score(hidden_states)
         logits1, logits2 = self.task_compute_module(self.model.score,
@@ -1003,6 +1012,8 @@ class OptimizerOPTForQuestionAnswering(MeZO2SGD):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
+        self.assign_zo2_attributes(self.model.model.opt, self)
+        
         # hidden_states = transformer_outputs[0]
 
         # logits = self.model.qa_outputs(hidden_states)
