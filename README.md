@@ -4,13 +4,13 @@
 
 ## Key Features
 
-- **Optimized ZO CPU Offloading**: ZO2 leverages <u>zeroth-order</u> methods to efficiently use <u>CPU offloading</u>, avoiding redundant data transfers and significantly reducing GPU memory demands. This allows for handling large-scale models on hardware with limited GPU resources.
+- **Optimized ZO CPU Offloading**: ZO2 leverages `zeroth-order (ZO)` methods to efficiently use `CPU offloading`, avoiding redundant data transfers and significantly reducing GPU memory demands. This allows for handling large-scale models on hardware with limited GPU resources.
 
-- **Dynamic Scheduling**: Incorporates a high-performance scheduler to optimize the <u>overlap between computation and communication</u>, enhancing GPU utilization and preventing training delays.
+- **Dynamic Scheduling**: Incorporates a high-performance scheduler to optimize the `computation-communication overlap`, enhancing GPU utilization and preventing training delays.
 
-- **Capability for Very Large Models**: Enables the fine-tuning of extraordinarily large models, such as those with over <u>175 billion parameters</u>, on single GPUs with as little as 24GB of memory, previously impossible with traditional methods.
+- **Capability for Very Large Models**: Enables the fine-tuning of extraordinarily large models, such as those with over `175 billion parameters`, on single GPUs with as little as 24GB of memory, previously impossible with traditional methods.
 
-- **Empirical Validation**: ZO2 has demonstrated through rigorous testing that it can efficiently fine-tune massive models <u>without extra time costs or accuracy losses</u>, confirming its effectiveness for large-scale model training.
+- **Empirical Validation**: ZO2 has demonstrated through rigorous testing that it can efficiently fine-tune massive models `without extra time costs or accuracy losses`, confirming its effectiveness for large-scale model training.
 
 ## Tutorial
 
