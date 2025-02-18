@@ -17,7 +17,7 @@ def train_mezo_sgd(model, args, modelConfig, device='cuda'):
     print("Init dataset")
     input_ids, pos, labels = prepare_data(modelConfig.vocab_size, args.batch_size, modelConfig.block_size, device=device)
     for i in tqdm(range(args.max_steps)):
-        check_throughput(i, args.batch_size, model, input_ids, pos, labels, use_tqdm=True)
+        check_throughput(i, args.batch_size*modelConfig.block_size, model, input_ids, pos, labels, use_tqdm=True)
 
 def train_mezo2_sgd(model, args, modelConfig, device='cuda'):
     seed_everything(args.seed)
@@ -26,7 +26,7 @@ def train_mezo2_sgd(model, args, modelConfig, device='cuda'):
     print("Init dataset")
     input_ids, pos, labels = prepare_data(modelConfig.vocab_size, args.batch_size, modelConfig.block_size, device=device)
     for i in tqdm(range(args.max_steps)):
-        check_throughput(i, args.batch_size, model, input_ids, pos, labels, use_tqdm=True)
+        check_throughput(i, args.batch_size*modelConfig.block_size, model, input_ids, pos, labels, use_tqdm=True)
 
 def test_mezo_sgd_training():
     seed_everything(args.seed)

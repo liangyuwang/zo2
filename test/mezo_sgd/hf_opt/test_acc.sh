@@ -27,6 +27,7 @@ do
         $CMD2 2>&1 | tee $OUT2
 
         echo "Comparing outputs..."
+        echo -e "Model: $model_name, Task: $task_id"
         paste <(grep 'Iteration' $OUT1) <(grep 'Iteration' $OUT2) | awk -v green="$GREEN" -v red="$RED" -v nc="$NC" '{
             split($4, loss1, ",");
             split($7, proj1, ",");
