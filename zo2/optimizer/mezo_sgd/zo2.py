@@ -95,18 +95,20 @@ class MeZO2SGD(MeZOSGD):
     
     #*********************** tasks ***********************#
 
-    def task_upload(self, module, device='cuda'):
+    def task_upload(self, module, device='cuda', upload_sync=True):
         if self.overlap:
-            self.upload_stream.synchronize()
+            if upload_sync:
+                self.upload_stream.synchronize()
             with torch.cuda.stream(self.upload_stream):
                 module = module.to(device, non_blocking=True)
         else:
             module = module.to(device)
         return module
 
-    def task_offload(self, module, device='cpu'):
+    def task_offload(self, module, device='cpu', offload_sync=True):
         if self.overlap:
-            self.offload_stream.synchronize()
+            if offload_sync:
+                self.offload_stream.synchronize()
             self.compute_stream.synchronize()   # offload depends on compute task
             with torch.cuda.stream(self.offload_stream):
                 module = module.to(device, non_blocking=True)
@@ -114,9 +116,10 @@ class MeZO2SGD(MeZOSGD):
             module = module.to(device)
         return module
     
-    def task_compute_module(self, module, inputs1, inputs2, grad, weight_decay=None):
+    def task_compute_module(self, module, inputs1, inputs2, grad, compute_sync=True, weight_decay=None):
         if self.overlap:
-            self.compute_stream.synchronize()
+            if compute_sync:
+                self.compute_stream.synchronize()
             self.upload_stream.synchronize()   # module compute depends on upload task
             with torch.cuda.stream(self.compute_stream):
                 o1, o2 = self.module_dual_forward(
@@ -134,9 +137,10 @@ class MeZO2SGD(MeZOSGD):
                     weight_decay=weight_decay)
         return o1, o2
     
-    def task_compute_function(self, fn, inputs1, inputs2):
+    def task_compute_function(self, fn, inputs1, inputs2, compute_sync=True):
         if self.overlap:
-            self.compute_stream.synchronize()
+            if compute_sync:
+                self.compute_stream.synchronize()
             with torch.cuda.stream(self.compute_stream):
                 o1, o2 = self.function_dual_forward(fn, inputs1, inputs2)
         else:

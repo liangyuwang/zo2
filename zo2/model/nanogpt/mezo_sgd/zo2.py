@@ -52,10 +52,12 @@ class Optimizer(MeZO2SGD):
         pe1, pe2 = self.task_compute_module(self.model.transformer.wpe, 
                                  {"input": pos}, 
                                  {"input": pos}, 
-                                 self.projected_grad)
+                                 self.projected_grad,
+                                 compute_sync=False)
         hidden_states1, hidden_states2 = self.task_compute_function(torch.add,
                                                                     {"input": we1, "other": pe1},
-                                                                    {"input": we2, "other": pe2})
+                                                                    {"input": we2, "other": pe2},
+                                                                    compute_sync=False)
         if 0 in self.offloading_blocks:
             self.model.transformer.h[0] = self.task_upload(
                 module=self.model.transformer.h[0], 

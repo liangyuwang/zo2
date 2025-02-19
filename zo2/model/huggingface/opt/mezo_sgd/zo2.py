@@ -509,25 +509,29 @@ class OptimizerOPTDecoder(MeZO2SGD):
             inputs1={"attention_mask": attention_mask, "input_shape": input_shape, 
                      "inputs_embeds": inputs_embeds1, "past_key_values_length": past_key_values_length},
             inputs2={"attention_mask": attention_mask, "input_shape": input_shape, 
-                     "inputs_embeds": inputs_embeds2, "past_key_values_length": past_key_values_length}
+                     "inputs_embeds": inputs_embeds2, "past_key_values_length": past_key_values_length},
+            compute_sync=False
         )
         # pos_embeds = self.model.embed_positions(attention_mask, past_key_values_length)
         pos_embeds1, pos_embeds2 = self.task_compute_module(self.model.embed_positions,
                                                             inputs1={"attention_mask": attention_mask, "past_key_values_length": past_key_values_length},
                                                             inputs2={"attention_mask": attention_mask, "past_key_values_length": past_key_values_length},
-                                                            grad=self.projected_grad)
+                                                            grad=self.projected_grad,
+                                                            compute_sync=False)
 
         if self.model.project_in is not None:
             # inputs_embeds = self.model.project_in(inputs_embeds)
             inputs_embeds1, inputs_embeds2 = self.task_compute_module(self.model.project_in,
                                                                       inputs1={"input": inputs_embeds1},
                                                                       inputs2={"input": inputs_embeds2},
-                                                                      grad=self.projected_grad)
+                                                                      grad=self.projected_grad,
+                                                                      compute_sync=False)
 
         # hidden_states = inputs_embeds + pos_embeds
         hidden_states1, hidden_states2 = self.task_compute_function(torch.add,
                                                                     inputs1={"input": inputs_embeds1, "other": pos_embeds1},
-                                                                    inputs2={"input": inputs_embeds2, "other": pos_embeds2})
+                                                                    inputs2={"input": inputs_embeds2, "other": pos_embeds2},
+                                                                    compute_sync=False)
 
         if 0 in self.offloading_blocks:
             self.model.layers[0] = self.task_upload(
@@ -631,7 +635,8 @@ class OptimizerOPTDecoder(MeZO2SGD):
             hidden_states1, hidden_states2 = self.task_compute_function(
                 fn=fn_get_opt_decoder_hidden_states_from_layer_outputs,
                 inputs1={"input": layer_outputs1},
-                inputs2={"input": layer_outputs2}
+                inputs2={"input": layer_outputs2},
+                compute_sync=False
             )
             
             if i in self.offloading_blocks:
@@ -657,7 +662,8 @@ class OptimizerOPTDecoder(MeZO2SGD):
         hidden_states1, hidden_states2 = self.task_compute_function(
             fn=fn_get_opt_decoder_hidden_states_from_layer_outputs,
             inputs1={"input": layer_outputs1},
-            inputs2={"input": layer_outputs2}
+            inputs2={"input": layer_outputs2},
+            compute_sync=False
         )
 
         if N-1 in self.offloading_blocks:
@@ -680,7 +686,8 @@ class OptimizerOPTDecoder(MeZO2SGD):
                 module=self.model.project_out,
                 inputs1={"input": hidden_states1},
                 inputs2={"input": hidden_states2},
-                grad=self.projected_grad)
+                grad=self.projected_grad,
+                compute_sync=False)
 
         # # add hidden states from the last decoder layer
         # if output_hidden_states:
