@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-model_names=("opt_125m" "opt_350m" "opt_1_3b" "opt_2_7b" "opt_6_7b")
+model_names=("opt_125m" "opt_350m" "opt_1_3b" "opt_2_7b" "opt_6_7b" "opt_13b" "opt_30b" "opt_66b" "opt_175b")
 task_ids=("causalLM")
 
 # ANSI color codes

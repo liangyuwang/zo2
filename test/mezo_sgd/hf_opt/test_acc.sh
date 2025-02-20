@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-model_names=("opt_125m" "opt_350m" "opt_1_3b" "opt_2_7b" "opt_6_7b")
+model_names=("opt_125m" "opt_350m" "opt_1_3b" "opt_2_7b" "opt_6_7b" "opt_13b" "opt_30b" "opt_66b" "opt_175b")
 task_ids=("causalLM" "sequence_classification" "question_answering")
 
 # ANSI color codes
@@ -17,8 +17,14 @@ do
     do
         echo "Testing model_name: $model_name, task_id: $task_id"
         
-        CMD1="python test/mezo_sgd/hf_opt/test_acc.py --model_name $model_name --task $task_id --zo_method zo"
-        CMD2="python test/mezo_sgd/hf_opt/test_acc.py --model_name $model_name --task $task_id --zo_method zo2"
+        if [ "$task_id" == "causalLM" ]; then
+            lr=1e-4
+        else
+            lr=1e-7
+        fi
+
+        CMD1="python test/mezo_sgd/hf_opt/test_acc.py --model_name $model_name --task $task_id --zo_method zo --lr $lr"
+        CMD2="python test/mezo_sgd/hf_opt/test_acc.py --model_name $model_name --task $task_id --zo_method zo2 --lr $lr"
 
         OUT1="/tmp/output1_${model_name}_${task_id}.txt"
         OUT2="/tmp/output2_${model_name}_${task_id}.txt"
