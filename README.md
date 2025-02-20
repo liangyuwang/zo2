@@ -92,15 +92,15 @@ In progress...
 
 ## Supported Models, ZO methods, and Tasks
 
-- Models: 
+- **Models**: 
     * [NanoGPT](https://github.com/karpathy/build-nanogpt/blob/master/train_gpt2.py)   (mainly for idea evaluation)
     * [Transformers](https://github.com/huggingface/transformers):
         * [OPT](https://arxiv.org/abs/2205.01068)
 
-- ZO methods:
+- **ZO methods**:
     * [MeZO-SGD](https://arxiv.org/abs/2305.17333)
 
-- Tasks: In progress...
+- **Tasks**: In progress...
 
 ## Test
 
