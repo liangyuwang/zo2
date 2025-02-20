@@ -12,13 +12,18 @@
 
 - **Empirical Validation**: ZO2 has demonstrated through rigorous testing that it can efficiently fine-tune massive models `without extra time costs or accuracy losses`, confirming its effectiveness for large-scale model training.
 
-## Tutorial
-
-In progress...
-
 ## Installation
 
+```shell
+git clone https://github.com/liangyuwang/zo2.git
+cd zo2/
+conda env create -f env.yaml
+conda activate zo2
+```
+
 ## Usage
+
+We utilize the [OPT](https://arxiv.org/abs/2205.01068) models and [MeZO-SGD](https://arxiv.org/abs/2305.17333) as examples. For additional information, please refer to the section on [Supported Models and ZO methods](#supported-models-zo-methods-and-tasks).
 
 ### 1. Train HF Models with Custom Training Loop
 
@@ -76,6 +81,30 @@ trainer = ZOTrainer(
 
 trainer.train()
 ```
+
+### 3. LLM SFT with Supported Tasks
+
+In progress...
+
+## Tutorial
+
+In progress...
+
+## Supported Models, ZO methods, and Tasks
+
+- Models: 
+    * [NanoGPT](https://github.com/karpathy/build-nanogpt/blob/master/train_gpt2.py)   (mainly for idea evaluation)
+    * [Transformers](https://github.com/huggingface/transformers):
+        * [OPT](https://arxiv.org/abs/2205.01068)
+
+- ZO methods:
+    * [MeZO-SGD](https://arxiv.org/abs/2305.17333)
+
+- Tasks: In progress...
+
+## Test
+
+See [test/README.md](test/README.md)
 
 ## Future Directions
 
