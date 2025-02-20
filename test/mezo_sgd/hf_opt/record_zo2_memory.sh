@@ -33,6 +33,6 @@ do
             echo -e "ZO2 peak GPU memory: ${GREEN}$max_mem2 MB${NC}"
         fi
 
-        rm $OUT1 $OUT2
+        rm $OUT2
     done
 done

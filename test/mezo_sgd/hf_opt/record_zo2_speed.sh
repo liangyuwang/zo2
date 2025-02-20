@@ -38,6 +38,6 @@ do
         echo -e "Model: $model_name, Task: $task_id"
         echo -e "ZO2 average throughput (last 50% iterations): ${GREEN}$avg_tok_s2 tok/s${NC}"
         
-        rm $OUT1 $OUT2
+        rm $OUT2
     done
 done
