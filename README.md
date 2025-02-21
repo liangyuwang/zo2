@@ -5,11 +5,8 @@
 ## Key Features
 
 - **Optimized ZO CPU Offloading**: ZO2 leverages `zeroth-order (ZO)` methods to efficiently use `CPU offloading`, avoiding redundant data transfers and significantly reducing GPU memory demands. This allows for handling large-scale models on hardware with limited GPU resources.
-
 - **Dynamic Scheduling**: Incorporates a high-performance scheduler to optimize the `computation-communication overlap`, enhancing GPU utilization and preventing training delays.
-
 - **Capability for Very Large Models**: Enables the fine-tuning of extraordinarily large models, such as those with over `175 billion parameters`, on single GPUs with as little as `24GB` of memory, previously impossible with traditional methods.
-
 - **Empirical Validation**: ZO2 has demonstrated through rigorous testing that it can efficiently fine-tune massive models `without extra time costs or accuracy losses`, confirming its effectiveness for large-scale model training.
 
 ## Installation
@@ -92,14 +89,14 @@ In progress...
 
 ## Supported Models, ZO methods, and Tasks
 
-- **Models**: 
-    * [NanoGPT](https://github.com/karpathy/build-nanogpt/blob/master/train_gpt2.py)   (mainly for idea evaluation)
-    * [Transformers](https://github.com/huggingface/transformers):
-        * [OPT](https://arxiv.org/abs/2205.01068)
+- **Models**:
 
+  * [NanoGPT](https://github.com/karpathy/build-nanogpt/blob/master/train_gpt2.py)   (mainly for idea evaluation)
+  * [Transformers](https://github.com/huggingface/transformers):
+    * [OPT](https://arxiv.org/abs/2205.01068)
 - **ZO methods**:
-    * [MeZO-SGD](https://arxiv.org/abs/2305.17333)
 
+  * [MeZO-SGD](https://arxiv.org/abs/2305.17333)
 - **Tasks**: In progress...
 
 ## Test
@@ -108,10 +105,15 @@ See [test/README.md](test/README.md)
 
 ## Future Directions
 
-- [ ] Support HF LLaMA, GPT.
-- [ ] Support TRL [SFTTrainer](https://huggingface.co/docs/trl/sft_trainer).
-- [ ] Support [AMP](https://pytorch.org/tutorials/recipes/recipes/amp_recipe.html) mode.
-- [ ] Support more ZO methods.
+- [ ] Support more models
+  - [ ] HF LLaMA
+  - [ ] HF GPT
+- [ ] Support more trainers
+  - [ ] TRL [SFTTrainer](https://huggingface.co/docs/trl/sft_trainer)
+- [ ] Support [AMP](https://pytorch.org/tutorials/recipes/recipes/amp_recipe.html) mode
+- [ ] Support more ZO methods
+- [ ] Support more offloading strategies
+  - [ ] Disk offloading
 
 ## Contributing
 

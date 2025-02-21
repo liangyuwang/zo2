@@ -15,7 +15,7 @@ class MeZOSGDConfig:
     # zo2 config
     zo2: bool = True    # use offloading or not
     offloading_blocks: list = None  # specify offloading blocks or not
-    offloading_device: str = 'cpu'  # offload device, can be CPU or a file path (disk offloading)
+    offloading_device: str = 'cpu'  # offload device, can be CPU or a file path (disk offloading, but currently unavailable)
     working_device: str = 'cuda'    # compute device, can be any CUDA device
     overlap: bool = True    # use scheduler to overlap or not
     compute_module_optimize_method: str = ''   # '', 'torch.compile'
