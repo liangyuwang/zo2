@@ -8,6 +8,7 @@ from collections import deque
 
 from .zo import MeZOSGD
 from ...config.mezo_sgd import MeZOSGDConfig
+from .backend import *
 
 
 class MeZO2SGD(MeZOSGD):
@@ -26,6 +27,9 @@ class MeZO2SGD(MeZOSGD):
         self.overlap = config.overlap
         self.offloading_blocks = config.offloading_blocks
         self.debug_mode = config.debug_mode
+        self.compute_module_optimize_method = config.compute_module_optimize_method
+        self.compute_function_optimize_method = config.compute_function_optimize_method
+        self.communicate_optimize_method = config.communicate_optimize_method
         self.init_zo2()
     
     def init_zo2(self):
@@ -95,56 +99,104 @@ class MeZO2SGD(MeZOSGD):
     
     #*********************** tasks ***********************#
 
-    def task_upload(self, module, device='cuda', upload_sync=True):
+    def task_upload(self, module, device='cuda', upload_sync=True, *args, **kwargs):
         if self.overlap:
             if upload_sync:
                 self.upload_stream.synchronize()
             with torch.cuda.stream(self.upload_stream):
-                module = module.to(device, non_blocking=True)
+                module = upload_impl(
+                    module, 
+                    device, 
+                    self.offloading_device,
+                    self.communicate_optimize_method, 
+                    non_blocking=True, 
+                    *args, **kwargs
+                )
         else:
-            module = module.to(device)
+            module = upload_impl(
+                module, 
+                device, 
+                self.offloading_device,
+                self.communicate_optimize_method, 
+                *args, **kwargs
+            )
         return module
 
-    def task_offload(self, module, device='cpu', offload_sync=True):
+    def task_offload(self, module, device='cpu', offload_sync=True, *args, **kwargs):
         if self.overlap:
             if offload_sync:
                 self.offload_stream.synchronize()
             self.compute_stream.synchronize()   # offload depends on compute task
             with torch.cuda.stream(self.offload_stream):
-                module = module.to(device, non_blocking=True)
+                module = offload_impl(
+                    module, 
+                    device, 
+                    self.offloading_device,
+                    self.communicate_optimize_method, 
+                    non_blocking=True, 
+                    *args, **kwargs
+                )
         else:
-            module = module.to(device)
+            module = offload_impl(
+                module, 
+                device, 
+                self.offloading_device,
+                self.communicate_optimize_method, 
+                *args, **kwargs
+            )
         return module
     
-    def task_compute_module(self, module, inputs1, inputs2, grad, compute_sync=True, weight_decay=None):
+    def task_compute_module(self, module, inputs1, inputs2, grad, compute_sync=True, weight_decay=None, *args, **kwargs):
         if self.overlap:
             if compute_sync:
                 self.compute_stream.synchronize()
             self.upload_stream.synchronize()   # module compute depends on upload task
             with torch.cuda.stream(self.compute_stream):
-                o1, o2 = self.module_dual_forward(
-                    module=module, 
+                o1, o2 = compute_module_impl(
+                    self.module_dual_forward,
+                    module,
+                    self.compute_module_optimize_method,
                     inputs1=inputs1, 
                     inputs2=inputs2,
                     projected_grad=grad,
-                    weight_decay=weight_decay)
+                    weight_decay=weight_decay,
+                    *args, **kwargs
+                )
         else:
-            o1, o2 = self.module_dual_forward(
-                    module=module, 
-                    inputs1=inputs1, 
-                    inputs2=inputs2,
-                    projected_grad=grad,
-                    weight_decay=weight_decay)
+            o1, o2 = compute_module_impl(
+                self.module_dual_forward,
+                module,
+                self.compute_module_optimize_method,
+                inputs1=inputs1, 
+                inputs2=inputs2,
+                projected_grad=grad,
+                weight_decay=weight_decay,
+                *args, **kwargs
+            )
         return o1, o2
     
-    def task_compute_function(self, fn, inputs1, inputs2, compute_sync=True):
+    def task_compute_function(self, fn, inputs1, inputs2, compute_sync=True, *args, **kwargs):
         if self.overlap:
             if compute_sync:
                 self.compute_stream.synchronize()
             with torch.cuda.stream(self.compute_stream):
-                o1, o2 = self.function_dual_forward(fn, inputs1, inputs2)
+                o1, o2 = compute_function_impl(
+                    self.function_dual_forward,
+                    fn,
+                    self.compute_function_optimize_method,
+                    inputs1=inputs1, 
+                    inputs2=inputs2,
+                    *args, **kwargs
+                )
         else:
-            o1, o2 = self.function_dual_forward(fn, inputs1, inputs2)
+            o1, o2 = compute_function_impl(
+                self.function_dual_forward,
+                fn,
+                self.compute_function_optimize_method,
+                inputs1=inputs1, 
+                inputs2=inputs2,
+                *args, **kwargs
+            )
         return o1, o2
     
     #*********************** example ***********************#
