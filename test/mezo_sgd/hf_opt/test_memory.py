@@ -14,7 +14,9 @@ from utils import (
     prepare_data_for_question_answering,
     model_size, 
     get_args,
-    check_peak_memory_usage
+    check_peak_memory_usage,
+    reset_peak_cpu_memory_usage, 
+    check_and_update_peak_cpu_memory_usage
 )
 
 def train_mezo_sgd_causalLM(model_config, zo_config, device='cuda'):
@@ -25,10 +27,12 @@ def train_mezo_sgd_causalLM(model_config, zo_config, device='cuda'):
     input_ids, labels = prepare_data_for_causalLM(
         model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
     torch.cuda.reset_peak_memory_stats()
+    reset_peak_cpu_memory_usage()
     for i in tqdm(range(args.max_steps)):
         model.zo_train()
         model(input_ids=input_ids, labels=labels)
         check_peak_memory_usage(i, device, True)
+        check_and_update_peak_cpu_memory_usage(i, True)
 
 def train_mezo2_sgd_causalLM(model_config, zo_config, device='cuda'):
     model = zo2.OPTForCausalLM(model_config)
@@ -38,10 +42,12 @@ def train_mezo2_sgd_causalLM(model_config, zo_config, device='cuda'):
     input_ids, labels = prepare_data_for_causalLM(
         model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
     torch.cuda.reset_peak_memory_stats()
+    reset_peak_cpu_memory_usage()
     for i in tqdm(range(args.max_steps)):
         model.zo_train()
         model(input_ids=input_ids, labels=labels)
         check_peak_memory_usage(i, device, True)
+        check_and_update_peak_cpu_memory_usage(i, True)
 
 
 def train_mezo_sgd_sequence_classification(model_config, zo_config, device='cuda'):
@@ -52,10 +58,12 @@ def train_mezo_sgd_sequence_classification(model_config, zo_config, device='cuda
     input_ids, labels = prepare_data_for_sequence_classification(
         model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
     torch.cuda.reset_peak_memory_stats()
+    reset_peak_cpu_memory_usage()
     for i in tqdm(range(args.max_steps)):
         model.zo_train()
         model(input_ids=input_ids, labels=labels)
         check_peak_memory_usage(i, device, True)
+        check_and_update_peak_cpu_memory_usage(i, True)
 
 def train_mezo2_sgd_sequence_classification(model_config, zo_config, device='cuda'):
     model = zo2.OPTForSequenceClassification(model_config).to(device)
@@ -65,10 +73,12 @@ def train_mezo2_sgd_sequence_classification(model_config, zo_config, device='cud
     input_ids, labels = prepare_data_for_sequence_classification(
         model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
     torch.cuda.reset_peak_memory_stats()
+    reset_peak_cpu_memory_usage()
     for i in tqdm(range(args.max_steps)):
         model.zo_train()
         model(input_ids=input_ids, labels=labels)
         check_peak_memory_usage(i, device, True)
+        check_and_update_peak_cpu_memory_usage(i, True)
 
 
 def train_mezo_sgd_question_answering(model_config, zo_config, device='cuda'):
@@ -79,10 +89,12 @@ def train_mezo_sgd_question_answering(model_config, zo_config, device='cuda'):
     input_ids, start_positions, end_positions = prepare_data_for_question_answering(
         model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
     torch.cuda.reset_peak_memory_stats()
+    reset_peak_cpu_memory_usage()
     for i in tqdm(range(args.max_steps)):
         model.zo_train()
         model(input_ids=input_ids, start_positions=start_positions, end_positions=end_positions)
         check_peak_memory_usage(i, device, True)
+        check_and_update_peak_cpu_memory_usage(i, True)
 
 def train_mezo2_sgd_question_answering(model_config, zo_config, device='cuda'):
     model = zo2.OPTForQuestionAnswering(model_config).to("cuda")
@@ -92,10 +104,12 @@ def train_mezo2_sgd_question_answering(model_config, zo_config, device='cuda'):
     input_ids, start_positions, end_positions = prepare_data_for_question_answering(
         model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
     torch.cuda.reset_peak_memory_stats()
+    reset_peak_cpu_memory_usage()
     for i in tqdm(range(args.max_steps)):
         model.zo_train()
         model(input_ids=input_ids, start_positions=start_positions, end_positions=end_positions)
         check_peak_memory_usage(i, device, True)
+        check_and_update_peak_cpu_memory_usage(i, True)
 
 
 def test_mezo_sgd_causalLM_training():

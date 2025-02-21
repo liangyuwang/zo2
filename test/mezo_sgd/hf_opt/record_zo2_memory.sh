@@ -23,13 +23,15 @@ do
 
         $CMD2 2>&1 | tee $OUT2
 
-        echo "Recording Peak GPU Memory usage..."
+        echo "Recording Peak CPU and GPU Memory usage..."
+        max_mem1=$(grep 'Peak CPU Memory' $OUT2 | awk '{print $7}' | sed 's/ MB//' | sort -nr | head -1)
         max_mem2=$(grep 'Peak GPU Memory' $OUT2 | awk '{print $7}' | sed 's/ MB//' | sort -nr | head -1)
 
-        if [ -z "$max_mem2" ]; then
+        if [ -z "$max_mem1" ] || [ -z "$max_mem2" ]; then
             echo "Could not find memory usage data in the output."
         else
             echo -e "Model: $model_name, Task: $task_id"
+            echo -e "ZO2 peak CPU memory: ${GREEN}$max_mem1 MB${NC}"
             echo -e "ZO2 peak GPU memory: ${GREEN}$max_mem2 MB${NC}"
         fi
 

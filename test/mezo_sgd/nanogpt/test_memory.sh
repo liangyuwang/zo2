@@ -14,8 +14,8 @@ for model_id in "${model_ids[@]}"
 do
     echo "Testing model_id: $model_id"
     
-    CMD1="python test/mezo_sgd/nanogpt/test_speed.py --model_id $model_id --zo_method zo --max_steps 30"
-    CMD2="python test/mezo_sgd/nanogpt/test_speed.py --model_id $model_id --zo_method zo2 --max_steps 30"
+    CMD1="python test/mezo_sgd/nanogpt/test_memory.py --model_id $model_id --zo_method zo --max_steps 30"
+    CMD2="python test/mezo_sgd/nanogpt/test_memory.py --model_id $model_id --zo_method zo2 --max_steps 30"
 
     OUT1="/tmp/output1_$model_id.txt"
     OUT2="/tmp/output2_$model_id.txt"
