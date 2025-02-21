@@ -105,6 +105,7 @@ class MeZO2SGD(MeZOSGD):
                 self.upload_stream.synchronize()
             with torch.cuda.stream(self.upload_stream):
                 module = upload_impl(
+                    self,
                     module, 
                     device, 
                     self.offloading_device,
@@ -114,6 +115,7 @@ class MeZO2SGD(MeZOSGD):
                 )
         else:
             module = upload_impl(
+                self,
                 module, 
                 device, 
                 self.offloading_device,
@@ -129,6 +131,7 @@ class MeZO2SGD(MeZOSGD):
             self.compute_stream.synchronize()   # offload depends on compute task
             with torch.cuda.stream(self.offload_stream):
                 module = offload_impl(
+                    self,
                     module, 
                     device, 
                     self.offloading_device,
@@ -138,6 +141,7 @@ class MeZO2SGD(MeZOSGD):
                 )
         else:
             module = offload_impl(
+                self,
                 module, 
                 device, 
                 self.offloading_device,
@@ -153,6 +157,7 @@ class MeZO2SGD(MeZOSGD):
             self.upload_stream.synchronize()   # module compute depends on upload task
             with torch.cuda.stream(self.compute_stream):
                 o1, o2 = compute_module_impl(
+                    self,
                     self.module_dual_forward,
                     module,
                     self.compute_module_optimize_method,
@@ -164,6 +169,7 @@ class MeZO2SGD(MeZOSGD):
                 )
         else:
             o1, o2 = compute_module_impl(
+                self,
                 self.module_dual_forward,
                 module,
                 self.compute_module_optimize_method,
@@ -181,6 +187,7 @@ class MeZO2SGD(MeZOSGD):
                 self.compute_stream.synchronize()
             with torch.cuda.stream(self.compute_stream):
                 o1, o2 = compute_function_impl(
+                    self,
                     self.function_dual_forward,
                     fn,
                     self.compute_function_optimize_method,
@@ -190,6 +197,7 @@ class MeZO2SGD(MeZOSGD):
                 )
         else:
             o1, o2 = compute_function_impl(
+                self,
                 self.function_dual_forward,
                 fn,
                 self.compute_function_optimize_method,

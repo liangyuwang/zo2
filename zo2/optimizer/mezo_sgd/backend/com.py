@@ -1,6 +1,7 @@
 import torch
 
 def compute_module_impl(
+        self,
         module_dual_forward,
         module: torch.nn.Module,
         optimize_method: str,
@@ -18,6 +19,7 @@ def compute_module_impl(
     return module_dual_forward(module=module, *args, **kwargs)
 
 def compute_function_impl(
+        self,
         function_dual_forward,
         fn,
         optimize_method: str,
