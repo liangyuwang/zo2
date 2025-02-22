@@ -2,6 +2,17 @@
 
 **ZO2** is an innovative framework specifically designed to enhance the fine-tuning of large language models (LLMs) using **zeroth-order (ZO)** optimization techniques and advanced **offloading** technologies. This framework is particularly tailored for setups with limited GPU memory (e.g. fine-tune **[OPT-175B](https://arxiv.org/abs/2205.01068)** with just **24GB GPU memory**), enabling the fine-tuning of models that were previously unmanageable due to hardware constraints.
 
+- The table below displays the GPU memory usage for various OPT model sizes when fine-tuned using the ZO2 framework:
+
+| OPT Models |   1.3B   |   2.7B   |   6.7B   |   13B    |   30B    |   66B    |   175B    |
+|:----------:|:--------:|:--------:|:--------:|:--------:|:--------:|:--------:|:---------:|
+| **GPU memory (GB)**       | `2.81`| `3.31`| `4.82`| `6.02`| `8.67`|`13.15`|<span style="color: red;">**21.56**</span> |
+
+- [Install](#installation) the package and execute the following test to see memory usage:
+```shell
+bash test/mezo_sgd/hf_opt/record_zo2_memory.sh
+```
+
 ## Key Features
 
 - **Optimized ZO CPU Offloading**: ZO2 leverages `zeroth-order (ZO)` methods to efficiently use `CPU offloading`, avoiding redundant data transfers and significantly reducing GPU memory demands. This allows for handling large-scale models on hardware with limited GPU resources.
