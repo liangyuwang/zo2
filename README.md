@@ -6,9 +6,9 @@
 
 | OPT Models |   1.3B   |   2.7B   |   6.7B   |   13B    |   30B    |   66B    |   175B    |
 |:----------:|:--------:|:--------:|:--------:|:--------:|:--------:|:--------:|:---------:|
-| **GPU memory (GB)**       | `2.81`| `3.31`| `4.82`| `6.02`| `8.67`|`13.15`|<span style="color: red;">**21.56**</span> |
+| **GPU memory (GB)**       | `2.81`| `3.31`| `4.82`| `6.02`| `8.67`|`13.15`|**`21.56`**|
 
-- [Install](#installation) the package and execute the following test to see memory usage:
+- [Install](#installation) the package and execute the following test to see the memory usage:
 ```shell
 bash test/mezo_sgd/hf_opt/record_zo2_memory.sh
 ```
