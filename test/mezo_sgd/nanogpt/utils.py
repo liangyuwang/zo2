@@ -10,6 +10,7 @@ def get_args():
     args = argparse.ArgumentParser()
     args.add_argument("--zo_method", type=str, default="zo2")
     args.add_argument("--model_id", type=str, default="gpt2")
+    args.add_argument("--model_dtype", type=str, default="fp32")
     args.add_argument("--verbose", action="store_true")
     args.add_argument("--max_steps", type=int, default=3)
     args.add_argument("--lr", type=float, default=1e-4)
@@ -20,7 +21,16 @@ def get_args():
     args.add_argument("--offloading_device", type=str, default="cpu")
     args.add_argument("--working_device", type=str, default="cuda:0")
     args = args.parse_args()
+    args.model_dtype = dtype_lookup[args.model_dtype]
     return args
+
+
+dtype_lookup = {
+    "fp64": torch.float64,
+    "fp32": torch.float32,
+    "fp16": torch.float16,
+    "bf16": torch.bfloat16
+}
 
 
 def model_size(model: torch.nn.Module):

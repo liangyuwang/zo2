@@ -20,12 +20,14 @@ from utils import (
 )
 
 def train_mezo_sgd_causalLM(model_config, zo_config, device='cuda'):
+    input_ids, labels = prepare_data_for_causalLM(
+        model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
+    torch.set_default_dtype(args.model_dtype)
     model = zo.OPTForCausalLM(model_config).to(device)
     model.zo_init(zo_config)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
-    input_ids, labels = prepare_data_for_causalLM(
-        model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
+    torch.set_default_dtype(original_dtype)
     torch.cuda.reset_peak_memory_stats()
     reset_peak_cpu_memory_usage()
     for i in tqdm(range(args.max_steps)):
@@ -35,12 +37,14 @@ def train_mezo_sgd_causalLM(model_config, zo_config, device='cuda'):
         check_and_update_peak_cpu_memory_usage(i, True)
 
 def train_mezo2_sgd_causalLM(model_config, zo_config, device='cuda'):
+    input_ids, labels = prepare_data_for_causalLM(
+        model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
+    torch.set_default_dtype(args.model_dtype)
     model = zo2.OPTForCausalLM(model_config)
     model.zo_init(zo_config)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
-    input_ids, labels = prepare_data_for_causalLM(
-        model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
+    torch.set_default_dtype(original_dtype)
     torch.cuda.reset_peak_memory_stats()
     reset_peak_cpu_memory_usage()
     for i in tqdm(range(args.max_steps)):
@@ -51,12 +55,14 @@ def train_mezo2_sgd_causalLM(model_config, zo_config, device='cuda'):
 
 
 def train_mezo_sgd_sequence_classification(model_config, zo_config, device='cuda'):
+    input_ids, labels = prepare_data_for_sequence_classification(
+        model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
+    torch.set_default_dtype(args.model_dtype)
     model = zo.OPTForSequenceClassification(model_config).to(device)
     model.zo_init(zo_config)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
-    input_ids, labels = prepare_data_for_sequence_classification(
-        model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
+    torch.set_default_dtype(original_dtype)
     torch.cuda.reset_peak_memory_stats()
     reset_peak_cpu_memory_usage()
     for i in tqdm(range(args.max_steps)):
@@ -66,12 +72,14 @@ def train_mezo_sgd_sequence_classification(model_config, zo_config, device='cuda
         check_and_update_peak_cpu_memory_usage(i, True)
 
 def train_mezo2_sgd_sequence_classification(model_config, zo_config, device='cuda'):
+    input_ids, labels = prepare_data_for_sequence_classification(
+        model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
+    torch.set_default_dtype(args.model_dtype)
     model = zo2.OPTForSequenceClassification(model_config).to(device)
     model.zo_init(zo_config)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
-    input_ids, labels = prepare_data_for_sequence_classification(
-        model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
+    torch.set_default_dtype(original_dtype)
     torch.cuda.reset_peak_memory_stats()
     reset_peak_cpu_memory_usage()
     for i in tqdm(range(args.max_steps)):
@@ -82,12 +90,14 @@ def train_mezo2_sgd_sequence_classification(model_config, zo_config, device='cud
 
 
 def train_mezo_sgd_question_answering(model_config, zo_config, device='cuda'):
+    input_ids, start_positions, end_positions = prepare_data_for_question_answering(
+        model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
+    torch.set_default_dtype(args.model_dtype)
     model = zo.OPTForQuestionAnswering(model_config).to("cuda")
     model.zo_init(zo_config)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
-    input_ids, start_positions, end_positions = prepare_data_for_question_answering(
-        model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
+    torch.set_default_dtype(original_dtype)
     torch.cuda.reset_peak_memory_stats()
     reset_peak_cpu_memory_usage()
     for i in tqdm(range(args.max_steps)):
@@ -97,12 +107,14 @@ def train_mezo_sgd_question_answering(model_config, zo_config, device='cuda'):
         check_and_update_peak_cpu_memory_usage(i, True)
 
 def train_mezo2_sgd_question_answering(model_config, zo_config, device='cuda'):
+    input_ids, start_positions, end_positions = prepare_data_for_question_answering(
+        model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
+    torch.set_default_dtype(args.model_dtype)
     model = zo2.OPTForQuestionAnswering(model_config).to("cuda")
     model.zo_init(zo_config)
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
-    input_ids, start_positions, end_positions = prepare_data_for_question_answering(
-        model_config.vocab_size, args.batch_size, model_config.max_position_embeddings, device)
+    torch.set_default_dtype(original_dtype)
     torch.cuda.reset_peak_memory_stats()
     reset_peak_cpu_memory_usage()
     for i in tqdm(range(args.max_steps)):
@@ -177,6 +189,7 @@ def test_mezo2_sgd_question_answering_training():
 
 if __name__=="__main__":
     args = get_args()
+    original_dtype = torch.get_default_dtype()
     if args.zo_method == "zo":
         if args.task == "causalLM":
             test_mezo_sgd_causalLM_training()

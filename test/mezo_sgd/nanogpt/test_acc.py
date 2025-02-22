@@ -41,7 +41,9 @@ def test_mezo_sgd_training():
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         working_device=args.working_device)
     zo_cfg.zo2 = False
+    torch.set_default_dtype(args.model_dtype)
     model_mezo = get_nanogpt_mezo_sgd(zo_cfg)(cfg, zo_cfg).to(args.working_device)
+    torch.set_default_dtype(original_dtype)
     train_mezo_sgd(model=model_mezo, 
                args=args, 
                model_config=cfg, 
@@ -54,7 +56,9 @@ def test_mezo2_sgd_training():
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
+    torch.set_default_dtype(args.model_dtype)
     model = get_nanogpt_mezo_sgd(zo_cfg)(cfg, zo_cfg)
+    torch.set_default_dtype(original_dtype)
     train_mezo2_sgd(model=model, 
                           args=args, 
                           model_config=cfg, 
@@ -63,6 +67,7 @@ def test_mezo2_sgd_training():
 
 if __name__ == "__main__":
     args = get_args()
+    original_dtype = torch.get_default_dtype()
     if args.zo_method == "zo":
         test_mezo_sgd_training()
     elif args.zo_method == "zo2":
