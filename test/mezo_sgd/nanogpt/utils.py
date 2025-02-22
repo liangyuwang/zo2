@@ -4,6 +4,7 @@ import argparse
 from tqdm import tqdm
 import psutil
 import os
+import pynvml
 
 
 def get_args():
@@ -48,14 +49,16 @@ def prepare_data(V, B, T, device='cuda'):
 
 
 # GPU Memory Monitoring
-def check_peak_memory_usage(iter, device="cuda:0", use_tqdm=False):
+pynvml.nvmlInit()
+def check_peak_gpu_memory_usage(iter, device=0, use_tqdm=False):
     # Check the peak memory usage
-    peak_memory = torch.cuda.max_memory_allocated(device=device) / (1024 ** 2)
+    handle = pynvml.nvmlDeviceGetHandleByIndex(device)  # Adjust index if necessary
+    info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+    peak_memory = info.used / 1024**2
     if use_tqdm:
         tqdm.write("Peak GPU Memory after iteration {}: {:.2f} MB".format(iter+1, peak_memory))
     else:
         print(f"Peak GPU Memory after iteration {iter+1}: {peak_memory:.2f} MB")
-    torch.cuda.reset_peak_memory_stats(device=device)
 
 # CPU Memory Monitoring
 peak_memory_cpu = 0
