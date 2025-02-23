@@ -10,6 +10,7 @@ import pynvml
 def get_args():
     args = argparse.ArgumentParser()
     args.add_argument("--zo_method", type=str, default="zo2")
+    args.add_argument("--eval", action="store_true")
     args.add_argument("--model_id", type=str, default="gpt2")
     args.add_argument("--model_dtype", type=str, default="fp32")
     args.add_argument("--verbose", action="store_true")

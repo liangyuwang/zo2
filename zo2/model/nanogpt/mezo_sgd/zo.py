@@ -16,7 +16,8 @@ class GPT(model.GPT, BaseZOModel):
         if self.zo_training:
             return self.opt.zo_forward(idx, pos, targets)
         else:
-            return super().forward(idx, pos, targets)
+            # for evaluate and inference purpose
+            return self.opt.zo_eval_forward(super().forward, idx, pos, targets)
 
 
 class Optimizer(MeZOSGD):
@@ -35,3 +36,9 @@ class Optimizer(MeZOSGD):
             targets[:, 1:].reshape(-1)
         )
         return loss.detach()
+
+    @torch.inference_mode()   
+    def inner_zo_eval_forward(self, eval_fn, idx, pos, targets):
+        loss = eval_fn(idx, pos, targets)
+        return loss
+    
