@@ -1,6 +1,6 @@
-# ZO2 (Zeroth-Order Offloading): Supervised Fine-Tuning Over 100B LLMs with 24GB GPU Memory
+# ZO2 (Zeroth-Order Offloading): Supervised Fine-Tuning Over 100B LLMs with 18GB GPU Memory
 
-**ZO2** is an innovative framework specifically designed to enhance the fine-tuning of large language models (LLMs) using **zeroth-order (ZO)** optimization techniques and advanced **offloading** technologies. This framework is particularly tailored for setups with limited GPU memory (e.g. fine-tune **[OPT-175B](https://arxiv.org/abs/2205.01068)** with just **24GB GPU memory**), enabling the fine-tuning of models that were previously unmanageable due to hardware constraints.
+👋 Welcome! **ZO2** is an innovative framework specifically designed to enhance the fine-tuning of large language models (LLMs) using **zeroth-order (ZO)** optimization techniques and advanced **offloading** technologies. This framework is particularly tailored for setups with limited GPU memory (e.g. fine-tune **[OPT-175B](https://arxiv.org/abs/2205.01068)** with just **18GB GPU memory**), enabling the fine-tuning of models that were previously unmanageable due to hardware constraints.
 
 - The table below displays the GPU memory usage for various OPT model sizes when fine-tuned using the ZO2 framework:
 
@@ -8,19 +8,21 @@
 |:----------:|:--------:|:--------:|:--------:|:--------:|:--------:|:--------:|:---------:|
 | **GPU memory (GB)** | `3.75`| `4.14`| `4.99`| `6.18`| `8.86`|`12.07`|**`18.04`**|
 
-- [Install](#installation) the package and execute the following test to see the memory usage:
+- [Install](#️installation) the package and execute the following test to see the memory usage:
 ```shell
 bash test/mezo_sgd/hf_opt/record_zo2_memory.sh
 ```
 
-## Key Features
+## 📰 News {#news}
+
+## 💡 Key Features {#key-features}
 
 - **Optimized ZO CPU Offloading**: ZO2 leverages `zeroth-order (ZO)` methods to efficiently use `CPU offloading`, avoiding redundant data transfers and significantly reducing GPU memory demands. This allows for handling large-scale models on hardware with limited GPU resources.
 - **Dynamic Scheduling**: Incorporates a high-performance scheduler to optimize the `computation-communication overlap`, enhancing GPU utilization and preventing training delays.
-- **Capability for Very Large Models**: Enables the fine-tuning of extraordinarily large models, such as those with over `175 billion parameters`, on single GPUs with as little as `24GB` of memory, previously impossible with traditional methods.
+- **Capability for Very Large Models**: Enables the fine-tuning of extraordinarily large models, such as those with over `175 billion parameters`, on single GPUs with as little as `18GB` of memory, previously impossible with traditional methods.
 - **Empirical Validation**: ZO2 has demonstrated through rigorous testing that it can efficiently fine-tune massive models `without extra time costs or accuracy losses`, confirming its effectiveness for large-scale model training.
 
-## Installation
+## ⚙️ Installation {#installation}
 
 ```shell
 git clone https://github.com/liangyuwang/zo2.git
@@ -29,9 +31,9 @@ conda env create -f env.yaml
 conda activate zo2
 ```
 
-## Usage
+## 🛠️ Usage {#usage}
 
-We utilize the [OPT](https://arxiv.org/abs/2205.01068) models and [MeZO-SGD](https://arxiv.org/abs/2305.17333) as examples. For additional information, please refer to the section on [Supported Models and ZO methods](#supported-models-zo-methods-and-tasks).
+We utilize the [OPT](https://arxiv.org/abs/2205.01068) models and [MeZO-SGD](https://arxiv.org/abs/2305.17333) as examples. For additional information, please refer to the section on [Supported Models and ZO methods](#support).
 
 ### 1. Train HF Models with Custom Training Loop
 
@@ -94,11 +96,11 @@ trainer.train()
 
 In progress...
 
-## Tutorial
+## ✨ Tutorial {#tutorial}
 
 In progress...
 
-## Supported Models, ZO methods, and Tasks
+## 🤖 Supported Models, ZO methods, and Tasks {#support}
 
 - **Models**:
 
@@ -110,11 +112,11 @@ In progress...
   * [MeZO-SGD](https://arxiv.org/abs/2305.17333)
 - **Tasks**: In progress...
 
-## Test
+## 🧪 Test {#test}
 
 See [test/README.md](test/README.md)
 
-## Future Directions
+## 🧭 Future Directions {#future-directions}
 
 - [ ] Support more models
   - [ ] HF LLaMA
@@ -126,8 +128,9 @@ See [test/README.md](test/README.md)
 - [ ] Support more offloading strategies
   - [ ] Disk offloading
 
-## Contributing
+## 🚶 Contributing {#contributing}
 
-## License
+## 📲 Contact {#contact}
+* Liangyu Wang: liangyu.wang@kaust.edu.sa
 
-## Authors
+## 👥 Authors {#authors}
