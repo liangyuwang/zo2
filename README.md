@@ -1,4 +1,4 @@
-# ZO2 (Zeroth-Order Offloading): Supervised Fine-Tuning Over 100B LLMs with 18GB GPU Memory
+# ZO2 (Zeroth-Order Offloading): Supervised Fine-Tuning 175B LLMs with 18GB GPU Memory
 
 👋 Welcome! **ZO2** is an innovative framework specifically designed to enhance the fine-tuning of large language models (LLMs) using **zeroth-order (ZO)** optimization techniques and advanced **offloading** technologies. This framework is particularly tailored for setups with limited GPU memory (e.g. fine-tune **[OPT-175B](https://arxiv.org/abs/2205.01068)** with just **18GB GPU memory**), enabling the fine-tuning of models that were previously unmanageable due to hardware constraints.
 
