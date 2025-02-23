@@ -13,16 +13,16 @@
 bash test/mezo_sgd/hf_opt/record_zo2_memory.sh
 ```
 
-## 📰 News {#news}
+## 📰 News
 
-## 💡 Key Features {#key-features}
+## 💡 Key Features
 
 - **Optimized ZO CPU Offloading**: ZO2 leverages `zeroth-order (ZO)` methods to efficiently use `CPU offloading`, avoiding redundant data transfers and significantly reducing GPU memory demands. This allows for handling large-scale models on hardware with limited GPU resources.
 - **Dynamic Scheduling**: Incorporates a high-performance scheduler to optimize the `computation-communication overlap`, enhancing GPU utilization and preventing training delays.
 - **Capability for Very Large Models**: Enables the fine-tuning of extraordinarily large models, such as those with over `175 billion parameters`, on single GPUs with as little as `18GB` of memory, previously impossible with traditional methods.
 - **Empirical Validation**: ZO2 has demonstrated through rigorous testing that it can efficiently fine-tune massive models `without extra time costs or accuracy losses`, confirming its effectiveness for large-scale model training.
 
-## ⚙️ Installation {#installation}
+## ⚙️ Installation
 
 ```shell
 git clone https://github.com/liangyuwang/zo2.git
@@ -31,9 +31,9 @@ conda env create -f env.yaml
 conda activate zo2
 ```
 
-## 🛠️ Usage {#usage}
+## 🛠️ Usage
 
-We utilize the [OPT](https://arxiv.org/abs/2205.01068) models and [MeZO-SGD](https://arxiv.org/abs/2305.17333) as examples. For additional information, please refer to the section on [Supported Models and ZO methods](#support).
+We utilize the [OPT](https://arxiv.org/abs/2205.01068) models and [MeZO-SGD](https://arxiv.org/abs/2305.17333) as examples. For additional information, please refer to the section on [Supported Models and ZO methods](#-supported-models-zo-methods-and-tasks-support).
 
 ### 1. Train HF Models with Custom Training Loop
 
@@ -96,11 +96,11 @@ trainer.train()
 
 In progress...
 
-## ✨ Tutorial {#tutorial}
+## ✨ Tutorial
 
 In progress...
 
-## 🤖 Supported Models, ZO methods, and Tasks {#support}
+## 🤖 Supported Models, ZO methods, and Tasks
 
 - **Models**:
 
@@ -112,11 +112,11 @@ In progress...
   * [MeZO-SGD](https://arxiv.org/abs/2305.17333)
 - **Tasks**: In progress...
 
-## 🧪 Test {#test}
+## 🧪 Test
 
 See [test/README.md](test/README.md)
 
-## 🧭 Future Directions {#future-directions}
+## 🧭 Future Directions
 
 - [ ] Support more models
   - [ ] HF LLaMA
@@ -128,9 +128,9 @@ See [test/README.md](test/README.md)
 - [ ] Support more offloading strategies
   - [ ] Disk offloading
 
-## 🚶 Contributing {#contributing}
+## 🚶 Contributing
 
-## 📲 Contact {#contact}
+## 📲 Contact
 * Liangyu Wang: liangyu.wang@kaust.edu.sa
 
-## 👥 Authors {#authors}
+## 👥 Authors
