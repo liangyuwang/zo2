@@ -21,6 +21,16 @@ class MeZOSGD:
         self.max_zo_random_seed = config.max_zo_random_seed
         self.debug_mode = config.debug_mode
     
+    def checkpoint_zo_attributes(self):
+        return {
+            'zo_random_seed': self.zo_random_seed, 
+            'projected_grad': self.projected_grad
+        }
+    
+    def resume_zo_attributes(self, attr_dict: dict):
+        for k, v in attr_dict.items():
+            setattr(self, k, v)
+
     @torch.inference_mode
     def zo_perturb_parameters(self, module: nn.Module, scaling_factor: float=1):       
         for _, param in module.named_parameters():
@@ -67,6 +77,13 @@ class MeZOSGD:
         self.zo_update(self.model)
         return loss1
 
+    #*********************** evaluate ***********************#
+
+    @torch.inference_mode()
+    def zo_eval_forward(self, *args, **kwargs):
+        loss = self.inner_zo_eval_forward(*args, **kwargs)
+        return loss.item()
+    
     #*********************** example ***********************#
 
     @torch.inference_mode
@@ -89,3 +106,8 @@ class MeZOSGD:
         )
         return loss.detach()
 
+    @torch.inference_mode()   
+    def inner_zo_eval_forward(self, idx, pos, targets):
+        loss = self.model(idx, pos, targets)
+        return loss
+    

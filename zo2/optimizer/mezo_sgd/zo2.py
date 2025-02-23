@@ -54,6 +54,15 @@ class MeZO2SGD(MeZOSGD):
         for attr in attrs_to_assign:
             setattr(target, attr, getattr(source, attr))
     
+    def checkpoint_zo_attributes(self):
+        return {
+            'zo_random_seed': self.zo_random_seed, 
+            'rstate': self.rstate, 
+            'rstate_queue': self.rstate_queue, 
+            'last_rstate': self.last_rstate, 
+            'projected_grad': self.projected_grad
+        }
+    
     @torch.inference_mode
     def zo_update(self, module, weight_decay=None):
         torch.cuda.set_rng_state(self.last_rstate)
@@ -207,6 +216,47 @@ class MeZO2SGD(MeZOSGD):
             )
         return o1, o2
     
+    #*********************** evaluate ***********************#
+
+    @torch.inference_mode()
+    def zo_eval_forward(self, *args, **kwargs):
+        torch.cuda.synchronize()    # global sync to make sure all tasks finish
+        loss = self.inner_zo_eval_forward(*args, **kwargs)
+        torch.cuda.synchronize()    # global sync to make sure all tasks finish
+        return loss.item()
+    
+    def add_zo2_eval_comm_hooks(self, blocks):
+        handles = []
+        for block in blocks:
+            if isinstance(block, nn.Module):
+                pre_handle = block.register_forward_pre_hook(self.eval_upload)
+                post_handle = block.register_forward_hook(self.eval_offload)
+                handles.append(pre_handle)
+                handles.append(post_handle)
+        return handles
+    
+    def clear_zo2_eval_comm_hooks(self, handles):
+        for handle in handles:
+            handle.remove()
+    
+    def eval_upload(self, module, device='cuda', *args, **kwargs):
+        module = upload_impl(
+            module, 
+            device, 
+            self.offloading_device,
+            *args, **kwargs
+        )
+        return module
+
+    def eval_offload(self, module, device='cpu', *args, **kwargs):
+        module = offload_impl(
+            module, 
+            device, 
+            self.offloading_device,
+            *args, **kwargs
+        )
+        return module
+    
     #*********************** example ***********************#
 
     def init_zo2_upload(self):
@@ -295,6 +345,12 @@ class MeZO2SGD(MeZOSGD):
                                                    "target": targets[:, 1:].reshape(-1)})
         return loss1, loss2
     
+    @torch.inference_mode()   
+    def inner_zo_eval_forward(self, idx, pos, targets):
+        handles = self.add_zo2_eval_comm_hooks(self.model.transformer.h)
+        loss = self.model(idx, pos, targets)
+        self.clear_zo2_eval_comm_hooks(handles)
+        return loss
     
 class MeZO2SGDAMP(MeZO2SGD):
     ...
