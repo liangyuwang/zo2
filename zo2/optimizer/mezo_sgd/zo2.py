@@ -8,7 +8,7 @@ from collections import deque
 
 from .zo import MeZOSGD
 from ...config.mezo_sgd import MeZOSGDConfig
-from .backend import *
+from .utils import *
 
 
 class MeZO2SGD(MeZOSGD):
@@ -113,8 +113,7 @@ class MeZO2SGD(MeZOSGD):
             if upload_sync:
                 self.upload_stream.synchronize()
             with torch.cuda.stream(self.upload_stream):
-                module = upload_impl(
-                    self,
+                module = self.upload_impl(
                     module, 
                     device, 
                     self.offloading_device,
@@ -123,8 +122,7 @@ class MeZO2SGD(MeZOSGD):
                     *args, **kwargs
                 )
         else:
-            module = upload_impl(
-                self,
+            module = self.upload_impl(
                 module, 
                 device, 
                 self.offloading_device,
@@ -139,8 +137,7 @@ class MeZO2SGD(MeZOSGD):
                 self.offload_stream.synchronize()
             self.compute_stream.synchronize()   # offload depends on compute task
             with torch.cuda.stream(self.offload_stream):
-                module = offload_impl(
-                    self,
+                module = self.offload_impl(
                     module, 
                     device, 
                     self.offloading_device,
@@ -149,8 +146,7 @@ class MeZO2SGD(MeZOSGD):
                     *args, **kwargs
                 )
         else:
-            module = offload_impl(
-                self,
+            module = self.offload_impl(
                 module, 
                 device, 
                 self.offloading_device,
@@ -165,8 +161,7 @@ class MeZO2SGD(MeZOSGD):
                 self.compute_stream.synchronize()
             self.upload_stream.synchronize()   # module compute depends on upload task
             with torch.cuda.stream(self.compute_stream):
-                o1, o2 = compute_module_impl(
-                    self,
+                o1, o2 = self.compute_module_impl(
                     self.module_dual_forward,
                     module,
                     self.compute_module_optimize_method,
@@ -177,8 +172,7 @@ class MeZO2SGD(MeZOSGD):
                     *args, **kwargs
                 )
         else:
-            o1, o2 = compute_module_impl(
-                self,
+            o1, o2 = self.compute_module_impl(
                 self.module_dual_forward,
                 module,
                 self.compute_module_optimize_method,
@@ -195,8 +189,7 @@ class MeZO2SGD(MeZOSGD):
             if compute_sync:
                 self.compute_stream.synchronize()
             with torch.cuda.stream(self.compute_stream):
-                o1, o2 = compute_function_impl(
-                    self,
+                o1, o2 = self.compute_function_impl(
                     self.function_dual_forward,
                     fn,
                     self.compute_function_optimize_method,
@@ -205,8 +198,7 @@ class MeZO2SGD(MeZOSGD):
                     *args, **kwargs
                 )
         else:
-            o1, o2 = compute_function_impl(
-                self,
+            o1, o2 = self.compute_function_impl(
                 self.function_dual_forward,
                 fn,
                 self.compute_function_optimize_method,
@@ -221,9 +213,9 @@ class MeZO2SGD(MeZOSGD):
     @torch.inference_mode()
     def zo_eval_forward(self, *args, **kwargs):
         torch.cuda.synchronize()    # global sync to make sure all tasks finish
-        loss = self.inner_zo_eval_forward(*args, **kwargs)
+        output = self.inner_zo_eval_forward(*args, **kwargs)
         torch.cuda.synchronize()    # global sync to make sure all tasks finish
-        return loss.item()
+        return output
     
     def add_zo2_eval_comm_hooks(self, blocks):
         handles = []
@@ -240,7 +232,7 @@ class MeZO2SGD(MeZOSGD):
             handle.remove()
     
     def eval_upload(self, module, device='cuda', *args, **kwargs):
-        module = upload_impl(
+        module = self.upload_impl(
             module, 
             device, 
             self.offloading_device,
@@ -249,7 +241,7 @@ class MeZO2SGD(MeZOSGD):
         return module
 
     def eval_offload(self, module, device='cpu', *args, **kwargs):
-        module = offload_impl(
+        module = self.offload_impl(
             module, 
             device, 
             self.offloading_device,
@@ -257,7 +249,113 @@ class MeZO2SGD(MeZOSGD):
         )
         return module
     
-    #*********************** example ***********************#
+    #*********************** backend ***********************#
+
+    def upload_impl(
+            self,
+            module: nn.Module, 
+            device: str, 
+            offloading_device: str,
+            optimize_method: str = "", 
+            module_id: str = None,
+            *args, **kwargs
+        ):
+        def _upload_impl(module, device, offloading_device, *args, **kwargs):
+            if offloading_device == "cpu":
+                return module.to(device, *args, **kwargs)
+            else:
+                if module_id == None:
+                    raise ValueError("For disk offloading mode, 'module_id' cannot be None.")
+                offloading_disk_path = get_disk_offload_path(offloading_device, module_id)
+                match type(module):
+                    case torch.Tensor:
+                        module = torch.load(offloading_disk_path, map_location=device)
+                    case nn.Module:
+                        module.load_state_dict(torch.load(offloading_disk_path, map_location=device))
+                    case _:
+                        raise ValueError
+                clear_disk_offload_path(offloading_device, module_id)
+        match optimize_method:
+            case "":
+                return _upload_impl(module, device, offloading_device, *args, **kwargs)
+            case "bucket":  # works on large-scale models
+                bucket, shapes = module_to_bucket_inplace(module)
+                bucket = _upload_impl(bucket, device, offloading_device, *args, **kwargs)
+                return bucket_to_module_inplace(bucket, module, shapes)
+            case _:
+                raise NotImplementedError
+
+    def offload_impl(
+            self,
+            module: nn.Module, 
+            device: str, 
+            offloading_device: str,
+            optimize_method: str = "", 
+            module_id: str = None,
+            *args, **kwargs
+        ):
+        def _offload_impl(module, device, offloading_device, *args, **kwargs):
+            if offloading_device == "cpu":
+                return module.to(device, *args, **kwargs)
+            else:
+                if module_id == None:
+                    raise ValueError("For disk offloading mode, 'module_id' cannot be None.")
+                offloading_disk_path = create_disk_offload_path(offloading_device, module_id)
+                match type(module):
+                    case torch.Tensor:
+                        torch.save(module, offloading_disk_path)
+                    case nn.Module:
+                        torch.save(module.state_dict(), offloading_disk_path)
+                    case _:
+                        raise ValueError
+                return module
+        match optimize_method:
+            case "":
+                return _offload_impl(module, device, offloading_device, *args, **kwargs)
+            case "bucket":  # works on large-scale models
+                bucket, shapes = module_to_bucket_inplace(module)
+                bucket = _offload_impl(bucket, device, offloading_device, *args, **kwargs)
+                return bucket_to_module_inplace(bucket, module, shapes)
+            case _:
+                raise NotImplementedError
+        
+    def compute_module_impl(
+            self,
+            module_dual_forward,
+            module: torch.nn.Module,
+            optimize_method: str,
+            *args, 
+            optimize_kwargs = None,
+            **kwargs
+        ):
+        match optimize_method:
+            case "":
+                pass
+            case "torch.compile":   # may introduce some precision mismatch
+                module = torch.compile(module, **optimize_kwargs)
+            case _:
+                raise NotImplementedError
+        return module_dual_forward(module=module, *args, **kwargs)
+
+    def compute_function_impl(
+            self,
+            function_dual_forward,
+            fn,
+            optimize_method: str,
+            *args, 
+            optimize_kwargs = None,
+            **kwargs
+        ):
+        match optimize_method:
+            case "":
+                pass
+            case "torch.jit.script":   # may introduce some precision mismatch
+                fn = torch.jit.script(fn, **optimize_kwargs)
+            case _:
+                raise NotImplementedError
+        return function_dual_forward(fn, *args, **kwargs)
+
+    #*********************** api ***********************#
 
     def init_zo2_upload(self):
         print("Upload head and tail to cuda.")
@@ -346,11 +444,11 @@ class MeZO2SGD(MeZOSGD):
         return loss1, loss2
     
     @torch.inference_mode()   
-    def inner_zo_eval_forward(self, idx, pos, targets):
+    def inner_zo_eval_forward(self, eval_fn, idx, pos, targets):
         handles = self.add_zo2_eval_comm_hooks(self.model.transformer.h)
-        loss = self.model(idx, pos, targets)
+        output = eval_fn(idx, pos, targets)
         self.clear_zo2_eval_comm_hooks(handles)
-        return loss
+        return output
     
 class MeZO2SGDAMP(MeZO2SGD):
     ...

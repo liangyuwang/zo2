@@ -81,10 +81,10 @@ class MeZOSGD:
 
     @torch.inference_mode()
     def zo_eval_forward(self, *args, **kwargs):
-        loss = self.inner_zo_eval_forward(*args, **kwargs)
-        return loss.item()
+        output = self.inner_zo_eval_forward(*args, **kwargs)
+        return output
     
-    #*********************** example ***********************#
+    #*********************** api ***********************#
 
     @torch.inference_mode
     def inner_zo_forward(self, idx, pos, targets):
@@ -107,7 +107,7 @@ class MeZOSGD:
         return loss.detach()
 
     @torch.inference_mode()   
-    def inner_zo_eval_forward(self, idx, pos, targets):
-        loss = self.model(idx, pos, targets)
-        return loss
+    def inner_zo_eval_forward(self, eval_fn, idx, pos, targets):
+        output = eval_fn(idx, pos, targets)
+        return output
     
