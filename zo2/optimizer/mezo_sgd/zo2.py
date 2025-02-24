@@ -240,11 +240,19 @@ class MeZO2SGD(MeZOSGD):
         return input
 
     def eval_offload_hook(self, module, input, output):
-        self.offload_impl(
-            module, 
-            self.offloading_device, 
-            self.offloading_device
-        )
+        if self.overlap:
+            with torch.cuda.stream(self.offload_stream):
+                self.offload_impl(
+                    module, 
+                    self.offloading_device, 
+                    self.offloading_device
+                )
+        else:
+            self.offload_impl(
+                module, 
+                self.offloading_device, 
+                self.offloading_device
+            )
         return output
     
     #*********************** backend ***********************#
