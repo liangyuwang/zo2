@@ -221,8 +221,8 @@ class MeZO2SGD(MeZOSGD):
         handles = []
         for block in blocks:
             if isinstance(block, nn.Module):
-                pre_handle = block.register_forward_pre_hook(self.eval_upload)
-                post_handle = block.register_forward_hook(self.eval_offload)
+                pre_handle = block.register_forward_pre_hook(self.eval_upload_hook)
+                post_handle = block.register_forward_hook(self.eval_offload_hook)
                 handles.append(pre_handle)
                 handles.append(post_handle)
         return handles
@@ -231,23 +231,21 @@ class MeZO2SGD(MeZOSGD):
         for handle in handles:
             handle.remove()
     
-    def eval_upload(self, module, device='cuda', *args, **kwargs):
-        module = self.upload_impl(
+    def eval_upload_hook(self, module, input):
+        self.upload_impl(
             module, 
-            device, 
-            self.offloading_device,
-            *args, **kwargs
+            self.device, 
+            self.offloading_device
         )
-        return module
+        return input
 
-    def eval_offload(self, module, device='cpu', *args, **kwargs):
-        module = self.offload_impl(
+    def eval_offload_hook(self, module, input, output):
+        self.offload_impl(
             module, 
-            device, 
-            self.offloading_device,
-            *args, **kwargs
+            self.offloading_device, 
+            self.offloading_device
         )
-        return module
+        return output
     
     #*********************** backend ***********************#
 
