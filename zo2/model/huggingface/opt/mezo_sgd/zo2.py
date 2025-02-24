@@ -112,7 +112,7 @@ class OPTDecoder(modeling_opt.OPTDecoder, OPTPreTrainedModel, BaseZOModel):
                 past_key_values, inputs_embeds, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
         else:
-            return super().forward(input_ids, attention_mask, head_mask, 
+            return self.opt.zo_eval_forward(super().forward, input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
 
@@ -154,7 +154,7 @@ class OPTModel(modeling_opt.OPTModel, OPTPreTrainedModel, BaseZOModel):
                 past_key_values, inputs_embeds, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
         else:
-            return super().forward(input_ids, attention_mask, head_mask, 
+            return self.opt.zo_eval_forward(super().forward, input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
 
@@ -270,7 +270,7 @@ class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel, BaseZOMode
                 past_key_values, inputs_embeds, labels, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
         else:
-            return super().forward(
+            return self.opt.zo_eval_forward(super().forward, 
                 input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, labels, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
@@ -324,7 +324,7 @@ class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, OP
                 past_key_values, inputs_embeds, labels, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
         else:
-            return super().forward(
+            return self.opt.zo_eval_forward(super().forward, 
                 input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, labels, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
@@ -409,7 +409,7 @@ class OPTForQuestionAnswering(modeling_opt.OPTForQuestionAnswering, OPTPreTraine
                 past_key_values, inputs_embeds, start_positions, end_positions, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
         else:
-            return super().forward(
+            return self.opt.zo_eval_forward(super().forward, 
                 input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, start_positions, end_positions, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
@@ -704,6 +704,27 @@ class OptimizerOPTDecoder(MeZO2SGD):
         # )
         return hidden_states1, hidden_states2
 
+    @torch.inference_mode
+    def inner_zo_eval_forward(
+        self,
+        eval_fn,
+        input_ids: torch.LongTensor = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        head_mask: Optional[torch.Tensor] = None,
+        past_key_values: Optional[List[torch.FloatTensor]] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, BaseModelOutputWithPast]:
+        handles = self.add_zo2_eval_comm_hooks(self.model.layers)
+        output = eval_fn(input_ids, attention_mask, head_mask, 
+            past_key_values, inputs_embeds, use_cache, 
+            output_attentions, output_hidden_states, return_dict)
+        self.clear_zo2_eval_comm_hooks(handles)
+        return output
+
 
 class OptimizerOPTModel(MeZO2SGD):
 
@@ -768,6 +789,28 @@ class OptimizerOPTModel(MeZO2SGD):
         #     hidden_states=decoder_outputs.hidden_states,
         #     attentions=decoder_outputs.attentions,
         # )
+
+    @torch.inference_mode
+    def inner_zo_eval_forward(
+        self,
+        eval_fn,
+        input_ids: torch.LongTensor = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        head_mask: Optional[torch.Tensor] = None,
+        past_key_values: Optional[List[torch.FloatTensor]] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, BaseModelOutputWithPast]:
+        self.model.decoder.zo_training = False
+        self.assign_zo2_attributes(self, self.model.decoder.opt)
+        output = eval_fn(input_ids, attention_mask, head_mask, 
+            past_key_values, inputs_embeds, use_cache, 
+            output_attentions, output_hidden_states, return_dict)
+        self.assign_zo2_attributes(self.model.decoder.opt, self)
+        return output
 
 
 class OptimizerOPTForCausalLM(MeZO2SGD):
@@ -855,6 +898,30 @@ class OptimizerOPTForCausalLM(MeZO2SGD):
         #     hidden_states=outputs.hidden_states,
         #     attentions=outputs.attentions,
         # )
+
+    @torch.inference_mode
+    def inner_zo_eval_forward(
+        self,
+        eval_fn,
+        input_ids: torch.LongTensor = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        head_mask: Optional[torch.Tensor] = None,
+        past_key_values: Optional[List[torch.FloatTensor]] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, CausalLMOutputWithPast]:
+        self.model.model.decoder.zo_training = False
+        self.assign_zo2_attributes(self, self.model.model.decoder.opt)
+        output = eval_fn(input_ids, attention_mask, head_mask, 
+            past_key_values, inputs_embeds, labels, use_cache, 
+            output_attentions, output_hidden_states, return_dict)
+        self.assign_zo2_attributes(self.model.model.decoder.opt, self)
+        return output
+
 
 class OptimizerOPTForSequenceClassification(MeZO2SGD):
 
@@ -979,6 +1046,29 @@ class OptimizerOPTForSequenceClassification(MeZO2SGD):
         #     attentions=transformer_outputs.attentions,
         # )
 
+    @torch.inference_mode
+    def inner_zo_eval_forward(
+        self,
+        eval_fn, 
+        input_ids: Optional[torch.LongTensor] = None,
+        attention_mask: Optional[torch.FloatTensor] = None,
+        head_mask: Optional[torch.FloatTensor] = None,
+        past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
+        self.model.model.zo_training = False
+        self.assign_zo2_attributes(self, self.model.model.decoder.opt)
+        output = eval_fn(input_ids, attention_mask, head_mask, 
+            past_key_values, inputs_embeds, labels, use_cache, 
+            output_attentions, output_hidden_states, return_dict)
+        self.assign_zo2_attributes(self.model.model.decoder.opt, self)
+        return output
+
 
 class OptimizerOPTForQuestionAnswering(MeZO2SGD):
     
@@ -1070,3 +1160,27 @@ class OptimizerOPTForQuestionAnswering(MeZO2SGD):
         #     hidden_states=transformer_outputs.hidden_states,
         #     attentions=transformer_outputs.attentions,
         # )
+
+    @torch.inference_mode
+    def inner_zo_eval_forward(
+        self,
+        eval_fn, 
+        input_ids: Optional[torch.LongTensor] = None,
+        attention_mask: Optional[torch.FloatTensor] = None,
+        head_mask: Optional[torch.FloatTensor] = None,
+        past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        start_positions: Optional[torch.LongTensor] = None,
+        end_positions: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        return_dict: Optional[bool] = None,
+    ) -> Union[Tuple, QuestionAnsweringModelOutput]:
+        self.model.model.zo_training = False
+        self.assign_zo2_attributes(self, self.model.model.decoder.opt)
+        output = eval_fn(input_ids, attention_mask, head_mask, 
+            past_key_values, inputs_embeds, start_positions, end_positions, use_cache, 
+            output_attentions, output_hidden_states, return_dict)
+        self.assign_zo2_attributes(self.model.model.decoder.opt, self)
+        return output

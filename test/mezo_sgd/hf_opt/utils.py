@@ -10,6 +10,7 @@ import pynvml
 def get_args():
     args = argparse.ArgumentParser()
     args.add_argument("--zo_method", type=str, default="zo2")
+    args.add_argument("--eval", action="store_true")
     args.add_argument("--task", type=str, default="causalLM")
     args.add_argument("--model_name", type=str, default="opt_125m")
     args.add_argument("--model_dtype", type=str, default="fp16")
