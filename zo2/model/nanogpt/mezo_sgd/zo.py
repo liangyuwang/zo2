@@ -17,7 +17,8 @@ class GPT(model.GPT, BaseZOModel):
             return self.opt.zo_forward(idx, pos, targets)
         else:
             # for evaluate and inference purpose
-            return self.opt.zo_eval_forward(super().forward, idx, pos, targets)
+            return super().forward(idx, pos, targets)
+            # return self.opt.zo_eval_forward(super().forward, idx, pos, targets)
 
 
 class Optimizer(MeZOSGD):
