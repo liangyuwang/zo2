@@ -39,6 +39,6 @@ class Optimizer(MeZOSGD):
 
     @torch.inference_mode()   
     def inner_zo_eval_forward(self, eval_fn, idx, pos, targets):
-        loss = eval_fn(idx, pos, targets)
-        return loss
+        output = eval_fn(idx, pos, targets)
+        return output
     
