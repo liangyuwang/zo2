@@ -4,11 +4,12 @@
 
 - The table below displays the GPU memory usage for various OPT model sizes when fine-tuned using the ZO2 framework:
 
-| OPT Models |   1.3B   |   2.7B   |   6.7B   |   13B    |   30B    |   66B    |   175B    |
-|:----------:|:--------:|:--------:|:--------:|:--------:|:--------:|:--------:|:---------:|
-| **GPU memory (GB)** | `3.75`| `4.14`| `4.99`| `6.18`| `8.86`|`12.07`|**`18.04`**|
+|        OPT Models        |   1.3B   |   2.7B   |   6.7B   |   13B   |   30B   |    66B    |        175B        |
+| :-----------------------: | :------: | :------: | :------: | :------: | :------: | :-------: | :-----------------: |
+| **GPU memory (GB)** | `3.75` | `4.14` | `4.99` | `6.18` | `8.86` | `12.07` | **`18.04`** |
 
 - [Install](#️installation) the package and execute the following test to see the memory usage:
+
 ```shell
 bash test/mezo_sgd/hf_opt/record_zo2_memory.sh
 ```
@@ -63,11 +64,11 @@ for i in range(max_training_step):
 model.opt.zo_update(model)
 ```
 
-### 2. Train HF Models with ZOTrainer
+### 2. Supervised Fine-Tuning HF Models with ZOSFTTrainer
 
 ```python
 from zo2 import ZOConfig, zo_hf_init
-from zo2.hf_transformers import ZOTrainer
+from zo2.hf_trl import ZOSFTTrainer
 from transformers import TrainingArguments
 
 # Model and optimizer init
@@ -79,22 +80,19 @@ with zo_hf_init(zo_config):
 
 training_args = TrainingArguments("test-trainer")
 
-trainer = ZOTrainer(
+trainer = ZOSFTTrainer(
     model,
-    training_args,
+    args = training_args,
     train_dataset=...,   # get training dataset
     eval_dataset=...,    # get eval dataset
     data_collator=...,   # get data_collator
     tokenizer=...,       # use suitable tokenizer
-    compute_metrics=..., # define compute_metrics func
+    compute_metrics=..., # define compute_metrics func,
+    ...
 )
 
 trainer.train()
 ```
-
-### 3. LLM SFT with Supported Tasks
-
-In progress...
 
 ## ✨ Tutorial
 
@@ -119,18 +117,19 @@ See [test/README.md](test/README.md)
 ## 🧭 Future Directions
 
 - [ ] Support more models
+
   - [ ] HF LLaMA
   - [ ] HF GPT
-- [ ] Support more trainers
-  - [ ] TRL [SFTTrainer](https://huggingface.co/docs/trl/sft_trainer)
 - [ ] Support [AMP](https://pytorch.org/tutorials/recipes/recipes/amp_recipe.html) mode
 - [ ] Support more ZO methods
 - [ ] Support more offloading strategies
+
   - [ ] Disk offloading
 
 ## 🚶 Contributing
 
 ## 📲 Contact
+
 * Liangyu Wang: liangyu.wang@kaust.edu.sa
 
 ## 👥 Authors
