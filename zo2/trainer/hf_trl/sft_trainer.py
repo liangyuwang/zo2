@@ -353,7 +353,8 @@ class ZOSFTTrainer(SFTTrainer):
         if args.gradient_checkpointing:
             self.model.gradient_checkpointing_enable()
 
-        model = self._wrap_model(self.model_wrapped)
+        # model = self._wrap_model(self.model_wrapped)
+        model = self.model
 
         if is_sagemaker_mp_enabled() and resume_from_checkpoint is not None:
             self._load_from_checkpoint(resume_from_checkpoint, model)
@@ -834,3 +835,7 @@ class ZOSFTTrainer(SFTTrainer):
         # Maybe delete some older checkpoints.
         if self.args.should_save:
             self._rotate_checkpoints(use_mtime=True, output_dir=run_dir)
+    
+
+    def _move_model_to_device(self, model, device):
+        pass
