@@ -31,7 +31,7 @@ args.add_argument("--log_every_step", type=int, default=20)
 args.add_argument("--use_cache", action="store_true")
 args.add_argument("--max_new_tokens", type=int, default=50)
 args = args.parse_args()
-# notice that ZO2 does not optimize the evaluate and the inference, so it may be very slow and take more GPU memory.
+# Note that ZO2 does not optimize evaluation and inference, so it may be significantly slower and use more GPU memory in this case.
 
 seed_everything(args.seed)
 

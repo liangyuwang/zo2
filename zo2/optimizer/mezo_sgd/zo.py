@@ -61,18 +61,21 @@ class MeZOSGD:
                     else:
                         param.data.sub_(self.lr * self.projected_grad * z)
     
+    def zo_perturb_shifts(self, first_perturb_shift=1, stride=2):
+        return [first_perturb_shift, -stride, stride-first_perturb_shift]
+
     @torch.inference_mode
     def zo_forward(self, *args, zo_random_seed: int=None, **kwargs):
         self.zo_random_seed = zo_random_seed if zo_random_seed else np.random.randint(self.max_zo_random_seed)
         torch.manual_seed(self.zo_random_seed)
-        self.zo_perturb_parameters(self.model, scaling_factor=1)
+        self.zo_perturb_parameters(self.model, scaling_factor=self.zo_perturb_shifts()[0])
         loss1 = self.inner_zo_forward(*args, **kwargs)
         torch.manual_seed(self.zo_random_seed)
-        self.zo_perturb_parameters(self.model, scaling_factor=-2)
+        self.zo_perturb_parameters(self.model, scaling_factor=self.zo_perturb_shifts()[1])
         loss2 = self.inner_zo_forward(*args, **kwargs)
         self.projected_grad = ((loss1 - loss2) / (2 * self.zo_eps)).item()
         torch.manual_seed(self.zo_random_seed)
-        self.zo_perturb_parameters(self.model, scaling_factor=1)
+        self.zo_perturb_parameters(self.model, scaling_factor=self.zo_perturb_shifts()[2])
         torch.manual_seed(self.zo_random_seed)
         self.zo_update(self.model)
         return loss1

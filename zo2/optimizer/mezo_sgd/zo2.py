@@ -75,13 +75,13 @@ class MeZO2SGD(MeZOSGD):
         if projected_grad != 0:
             module = self.zo_update(module, weight_decay)
         torch.cuda.set_rng_state(self.rstate)
-        self.zo_perturb_parameters(module, scaling_factor=1)
+        self.zo_perturb_parameters(module, scaling_factor=self.zo_perturb_shifts()[0])
         output1 = module(**inputs1)
         torch.cuda.set_rng_state(self.rstate)
-        self.zo_perturb_parameters(module, scaling_factor=-2)
+        self.zo_perturb_parameters(module, scaling_factor=self.zo_perturb_shifts()[1])
         output2 = module(**inputs2)
         torch.cuda.set_rng_state(self.rstate)
-        self.zo_perturb_parameters(module, scaling_factor=1)
+        self.zo_perturb_parameters(module, scaling_factor=self.zo_perturb_shifts()[2])
         self.rstate = torch.cuda.get_rng_state()
         return output1, output2
     

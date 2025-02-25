@@ -748,8 +748,6 @@ class ZOSFTTrainer(SFTTrainer):
             raise NotImplementedError
         if is_sagemaker_mp_enabled():
             raise NotImplementedError
-        # if is_accelerate_available():
-        #     raise NotImplementedError
         if args.torch_compile:
             raise NotImplementedError
 
