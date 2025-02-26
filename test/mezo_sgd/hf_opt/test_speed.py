@@ -181,6 +181,7 @@ def test_mezo_sgd_causalLM_training():
     model_configs = OPTConfigs()
     model_config = getattr(model_configs, args.model_name)
     model_config.tie_word_embeddings=False
+    model_config.max_position_embeddings = args.sequence_length
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         working_device=args.working_device)
     zo_cfg.zo2 = False
@@ -191,6 +192,7 @@ def test_mezo2_sgd_causalLM_training():
     model_configs = OPTConfigs()
     model_config = getattr(model_configs, args.model_name)
     model_config.tie_word_embeddings=False
+    model_config.max_position_embeddings = args.sequence_length
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
@@ -201,6 +203,7 @@ def test_mezo_sgd_causalLM_eval():
     model_configs = OPTConfigs()
     model_config = getattr(model_configs, args.model_name)
     model_config.tie_word_embeddings=False
+    model_config.max_position_embeddings = args.sequence_length
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         working_device=args.working_device)
     zo_cfg.zo2 = False
@@ -211,6 +214,7 @@ def test_mezo2_sgd_causalLM_eval():
     model_configs = OPTConfigs()
     model_config = getattr(model_configs, args.model_name)
     model_config.tie_word_embeddings=False
+    model_config.max_position_embeddings = args.sequence_length
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
@@ -222,6 +226,7 @@ def test_mezo_sgd_sequence_classification_training():
     model_configs = OPTConfigs()
     model_config = getattr(model_configs, args.model_name)
     model_config.tie_word_embeddings=False
+    model_config.max_position_embeddings = args.sequence_length
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         working_device=args.working_device)
     zo_cfg.zo2 = False
@@ -232,6 +237,7 @@ def test_mezo2_sgd_sequence_classification_training():
     model_configs = OPTConfigs()
     model_config = getattr(model_configs, args.model_name)
     model_config.tie_word_embeddings=False
+    model_config.max_position_embeddings = args.sequence_length
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
@@ -242,6 +248,7 @@ def test_mezo_sgd_sequence_classification_eval():
     model_configs = OPTConfigs()
     model_config = getattr(model_configs, args.model_name)
     model_config.tie_word_embeddings=False
+    model_config.max_position_embeddings = args.sequence_length
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         working_device=args.working_device)
     zo_cfg.zo2 = False
@@ -252,6 +259,7 @@ def test_mezo2_sgd_sequence_classification_eval():
     model_configs = OPTConfigs()
     model_config = getattr(model_configs, args.model_name)
     model_config.tie_word_embeddings=False
+    model_config.max_position_embeddings = args.sequence_length
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
@@ -263,6 +271,7 @@ def test_mezo_sgd_question_answering_training():
     model_configs = OPTConfigs()
     model_config = getattr(model_configs, args.model_name)
     model_config.tie_word_embeddings=False
+    model_config.max_position_embeddings = args.sequence_length
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         working_device=args.working_device)
     zo_cfg.zo2 = False
@@ -273,6 +282,7 @@ def test_mezo2_sgd_question_answering_training():
     model_configs = OPTConfigs()
     model_config = getattr(model_configs, args.model_name)
     model_config.tie_word_embeddings=False
+    model_config.max_position_embeddings = args.sequence_length
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
@@ -283,6 +293,7 @@ def test_mezo_sgd_question_answering_eval():
     model_configs = OPTConfigs()
     model_config = getattr(model_configs, args.model_name)
     model_config.tie_word_embeddings=False
+    model_config.max_position_embeddings = args.sequence_length
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         working_device=args.working_device)
     zo_cfg.zo2 = False
@@ -293,6 +304,7 @@ def test_mezo2_sgd_question_answering_eval():
     model_configs = OPTConfigs()
     model_config = getattr(model_configs, args.model_name)
     model_config.tie_word_embeddings=False
+    model_config.max_position_embeddings = args.sequence_length
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True

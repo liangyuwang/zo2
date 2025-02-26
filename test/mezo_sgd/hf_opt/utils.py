@@ -21,6 +21,7 @@ def get_args():
     args.add_argument("--zo_eps", type=float, default=1e-3)
     args.add_argument("--seed", type=int, default=42)
     args.add_argument("--batch_size", type=int, default=1)
+    args.add_argument("--sequence_length", type=int, default=2048)
     args.add_argument("--overlap", type=str, default="all")
     args.add_argument("--offloading_device", type=str, default="cpu")
     args.add_argument("--working_device", type=str, default="cuda:0")
