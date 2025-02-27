@@ -21,7 +21,7 @@ from datasets import load_dataset
 from tasks import get_task
 from metrics import calculate_metric
 from utils import *
-from zo2.trainer.hf_trl.sft_trainer import ZOSFTTrainer as SFTTrainer
+from zo2.trainer.hf_trl.sft_trainer import ZOSFTTrainer
 from zo2 import zo_hf_init, ZOConfig
 from zo2.utils.utils import seed_everything
 
@@ -99,10 +99,12 @@ class TrainingRunner:
         # Set up training arguments for the HuggingFace Trainer
         self.training_args = TrainingArguments(
             output_dir="./tmp",
+            do_eval=args.eval,
             evaluation_strategy="steps",
             per_device_train_batch_size = args.batch_size,
             per_device_eval_batch_size = args.batch_size,
             logging_steps=args.log_every_step,
+            eval_steps=args.eval_every_step,
             max_steps=args.max_steps,
         )
 
@@ -146,7 +148,7 @@ class TrainingRunner:
                         [],
                         sample,
                         self.tokenizer,
-                        max_length=self.args.max_length,
+                        max_length=self.args.max_length+1,
                         generation=self.task.generation,
                         generation_with_gold=True,
                         max_new_tokens=self.args.max_new_tokens,
@@ -286,9 +288,9 @@ class TrainingRunner:
 
     def train(self):
         """
-        Execute training using SFTTrainer.
+        Execute training using ZOSFTTrainer.
         """
-        trainer = SFTTrainer(
+        trainer = ZOSFTTrainer(
             self.model,
             train_dataset=self.train_dataset,
             data_collator=self.collator,
@@ -298,6 +300,11 @@ class TrainingRunner:
             dataset_text_field="text",
             max_seq_length=self.args.max_length,
         )
+        def _zo2_training_step_pre_hook(model, inputs):
+            inputs["input_ids"] = inputs["input_ids"][..., :-1]
+            inputs["labels"] = inputs["labels"][..., 1:]
+            return model, inputs
+        trainer.register_zo2_training_step_pre_hook(_zo2_training_step_pre_hook)
         trainer.train()
 
     def run(self):
@@ -306,7 +313,7 @@ class TrainingRunner:
         """
         logger.info("Starting training...")
         self.train()
-        if self.args.eval:
+        if self.args.test:
             # For evaluation without in-context learning, passing an empty train set
             # Adjust this part if in-context evaluation is required
             metrics = self.evaluate([], self.eval_samples[:self.args.max_dev_data])

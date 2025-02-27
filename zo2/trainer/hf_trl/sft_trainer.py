@@ -251,6 +251,22 @@ class ZOSFTTrainer(SFTTrainer):
         neftune_noise_alpha: Optional[float] = None,
         model_init_kwargs: Optional[Dict] = None,
     ):
+        # ZO2 added: if using ZO2:
+        if hasattr(model, "zo_training"):
+            print("ZO training mode is enabled.")
+            self.zo = True
+        else:
+            self.zo = False
+
+        # ZO2 added: currently unsupported conditions
+        if self.zo:
+            self._zo2_unsupported_conditions(args)
+        
+        # ZO2 added: init hooks buffer
+        if self.zo:
+            self.zo2_training_step_pre_hooks = []
+            self.zo2_training_step_post_hooks = []
+
         super().__init__(model, args, data_collator, train_dataset, eval_dataset,
                          tokenizer, model_init, compute_metrics, callbacks,
                          optimizers, preprocess_logits_for_metrics, peft_config,
@@ -264,17 +280,6 @@ class ZOSFTTrainer(SFTTrainer):
         We overload the original training loop to add ZO2. Search key word "ZO2 added"
         for those updates.
         """
-
-        # ZO2 added: if using ZO2:
-        if hasattr(self.model, "zo_training"):
-            print("ZO training mode is enabled.")
-            self.zo = True
-        else:
-            self.zo = False
-
-        # ZO2 added: currently unsupported conditions
-        if self.zo:
-            self._zo2_unsupported_conditions(args)
 
         self._train_batch_size = batch_size
         # Data loader and number of training steps
@@ -751,12 +756,23 @@ class ZOSFTTrainer(SFTTrainer):
         if args.torch_compile:
             raise NotImplementedError
 
+    def register_zo2_training_step_pre_hook(self, hook_fn):
+        self.zo2_training_step_pre_hooks.append(hook_fn)
+
+    def register_zo2_training_step_post_hook(self, hook_fn):
+        self.zo2_training_step_post_hooks.append(hook_fn)
 
     def zo2_training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:
+        if self.zo2_training_step_pre_hooks != []:
+            for pre_hook_fn in self.zo2_training_step_pre_hooks:
+                model, inputs = pre_hook_fn(model, inputs)
         model.zo_train()
         inputs = self._prepare_inputs(inputs)
         loss = model(**inputs)
         model.zo_eval()
+        if self.zo2_training_step_post_hooks != []:
+            for post_hook_fn in self.zo2_training_step_post_hooks:
+                model, inputs, loss = post_hook_fn(model, inputs, loss)
         return loss
     
 
