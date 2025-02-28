@@ -189,6 +189,7 @@ class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel, BaseZOMode
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        **kwargs
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
         Args:
@@ -268,12 +269,12 @@ class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel, BaseZOMode
             return self.opt.zo_forward(
                 input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, labels, use_cache, 
-                output_attentions, output_hidden_states, return_dict)
+                output_attentions, output_hidden_states, return_dict, **kwargs)
         else:
             return self.opt.zo_eval_forward(super().forward, 
                 input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, labels, use_cache, 
-                output_attentions, output_hidden_states, return_dict)
+                output_attentions, output_hidden_states, return_dict, **kwargs)
 
 
 class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, OPTPreTrainedModel, BaseZOModel):
@@ -831,6 +832,7 @@ class OptimizerOPTForCausalLM(MeZO2SGD):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        **kwargs
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         """
             copy the original forward code and replace all 'self' to 'self.model'.
@@ -864,8 +866,19 @@ class OptimizerOPTForCausalLM(MeZO2SGD):
                                                     inputs2={"input": hidden_states2},
                                                     grad=self.projected_grad)
 
-        # # loss = None
-        if labels is not None:
+        if self.model.zo_loss_fn_pre_hooks != []:
+            for pre_hook_fn in self.model.zo_loss_fn_pre_hooks:
+                (input_ids, logits1, labels), (input_ids, logits2, labels) = \
+                    self.task_compute_function(pre_hook_fn,
+                                               inputs1={"self": self, "input_ids": input_ids, "logits": logits1, "labels": labels},
+                                               inputs2={"self": self, "input_ids": input_ids, "logits": logits2, "labels": labels})
+        
+        # loss = None
+        if self.model.zo_custom_train_loss_fn:
+            loss1, loss2 = self.task_compute_function(self.model.zo_custom_train_loss_fn,
+                                                      inputs1={"self": self.model, "input_ids": input_ids, "logits": logits1, "labels": labels, **kwargs},
+                                                      inputs2={"self": self.model, "input_ids": input_ids, "logits": logits2, "labels": labels, **kwargs})
+        elif labels is not None:
             # Shift so that tokens < n predict n
             # shift_logits = logits[..., :-1, :].contiguous()
             shift_logits1, shift_logits2 = self.task_compute_function(
@@ -913,12 +926,32 @@ class OptimizerOPTForCausalLM(MeZO2SGD):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        **kwargs
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         self.model.model.decoder.zo_training = False
         self.assign_zo2_attributes(self, self.model.model.decoder.opt)
-        output = eval_fn(input_ids, attention_mask, head_mask, 
-            past_key_values, inputs_embeds, labels, use_cache, 
-            output_attentions, output_hidden_states, return_dict)
+        if self.model.zo_custom_eval_loss_fn:
+            output = eval_fn(input_ids, attention_mask, head_mask, 
+                past_key_values, inputs_embeds, None, use_cache, 
+                output_attentions, output_hidden_states, return_dict)
+            if not return_dict:
+                logits = output[0]
+                loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, logits, labels, **kwargs)
+                output = (logits,) + output[1]
+                return (loss,) + output if loss is not None else output
+            logits = output["logits"]
+            loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, logits, labels, **kwargs)
+            output = CausalLMOutputWithPast(
+                loss=loss,
+                logits=logits,
+                past_key_values=output["past_key_values"],
+                hidden_states=output["hidden_states"],
+                attentions=output["attentions"],
+            )
+        else:
+            output = eval_fn(input_ids, attention_mask, head_mask, 
+                past_key_values, inputs_embeds, labels, use_cache, 
+                output_attentions, output_hidden_states, return_dict)
         self.assign_zo2_attributes(self.model.model.decoder.opt, self)
         return output
 

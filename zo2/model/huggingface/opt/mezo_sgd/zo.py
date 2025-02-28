@@ -123,6 +123,7 @@ class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel, BaseZOMode
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        **kwargs
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
         Args:
@@ -202,12 +203,12 @@ class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel, BaseZOMode
             return self.opt.zo_forward(
                 input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, labels, use_cache, 
-                output_attentions, output_hidden_states, return_dict)
+                output_attentions, output_hidden_states, return_dict, **kwargs)
         else:
             return self.opt.zo_eval_forward(super().forward, 
                 input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, labels, use_cache, 
-                output_attentions, output_hidden_states, return_dict)
+                output_attentions, output_hidden_states, return_dict, **kwargs)
 
 
 class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, OPTPreTrainedModel, BaseZOModel):
@@ -362,6 +363,7 @@ class OptimizerOPTForCausalLM(MeZOSGD):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        **kwargs
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         """
             copy the original forward code and replace all 'self' to 'self.model'.
@@ -388,8 +390,14 @@ class OptimizerOPTForCausalLM(MeZOSGD):
 
         logits = self.model.lm_head(outputs[0]).contiguous()
 
+        if self.model.zo_loss_fn_pre_hooks != []:
+            for pre_hook_fn in self.model.zo_loss_fn_pre_hooks:
+                input_ids, logits, labels = pre_hook_fn(self, input_ids, logits, labels)
+
         loss = None
-        if labels is not None:
+        if self.model.zo_custom_train_loss_fn:
+            loss = self.model.zo_custom_train_loss_fn(self.model, input_ids, logits, labels, **kwargs)
+        elif labels is not None:
             # Shift so that tokens < n predict n
             shift_logits = logits[..., :-1, :].contiguous()
             shift_labels = labels[..., 1:].contiguous()
@@ -397,9 +405,12 @@ class OptimizerOPTForCausalLM(MeZOSGD):
             loss_fct = CrossEntropyLoss()
             loss = loss_fct(shift_logits.view(-1, self.model.config.vocab_size), shift_labels.view(-1))
 
+        if self.model.zo_loss_fn_post_hooks != []:
+            for post_hook_fn in self.model.zo_loss_fn_post_hooks:
+                loss, input_ids, logits, labels = post_hook_fn(self, loss, input_ids, logits, labels)
+
         # add --> only return loss
-        if self.model.zo_training:
-            return loss.detach()
+        return loss.detach()
 
     @torch.inference_mode()   
     def inner_zo_eval_forward(
@@ -415,10 +426,30 @@ class OptimizerOPTForCausalLM(MeZOSGD):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        **kwargs
     ) -> Union[Tuple, CausalLMOutputWithPast]:
-        output = eval_fn(input_ids, attention_mask, head_mask, 
-            past_key_values, inputs_embeds, labels, use_cache, 
-            output_attentions, output_hidden_states, return_dict)
+        if self.model.zo_custom_eval_loss_fn:
+            output = eval_fn(input_ids, attention_mask, head_mask, 
+                past_key_values, inputs_embeds, None, use_cache, 
+                output_attentions, output_hidden_states, return_dict)
+            if not return_dict:
+                logits = output[0]
+                loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, logits, labels, **kwargs)
+                output = (logits,) + output[1]
+                return (loss,) + output if loss is not None else output
+            logits = output["logits"]
+            loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, logits, labels, **kwargs)
+            output = CausalLMOutputWithPast(
+                loss=loss,
+                logits=logits,
+                past_key_values=output["past_key_values"],
+                hidden_states=output["hidden_states"],
+                attentions=output["attentions"],
+            )
+        else:
+            output = eval_fn(input_ids, attention_mask, head_mask, 
+                past_key_values, inputs_embeds, labels, use_cache, 
+                output_attentions, output_hidden_states, return_dict)
         return output
     
 
