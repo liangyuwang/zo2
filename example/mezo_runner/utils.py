@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 
-def custom_loss_fn(self, input_ids, logits, labels, option_len=None, num_options=None):
+def custom_loss_fn_with_option_len(self, input_ids, logits, labels, option_len=None, num_options=None):
     """
     Modified from below 'forward_wrap_with_option_len'.
     """

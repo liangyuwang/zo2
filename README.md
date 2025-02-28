@@ -1,4 +1,4 @@
-# ZO2 (Zeroth-Order Offloading): Supervised Fine-Tuning 175B LLMs with 18GB GPU Memory
+# ZO2 (Zeroth-Order Offloading): Full Parameter Fine-Tuning 175B LLMs with 18GB GPU Memory
 
 👋 Welcome! **ZO2** is an innovative framework specifically designed to enhance the fine-tuning of large language models (LLMs) using **zeroth-order (ZO)** optimization techniques and advanced **offloading** technologies. This framework is particularly tailored for setups with limited GPU memory (e.g. fine-tune **[OPT-175B](https://arxiv.org/abs/2205.01068)** with just **18GB GPU memory**), enabling the fine-tuning of models that were previously unmanageable due to hardware constraints.
 
@@ -64,11 +64,11 @@ for i in range(max_training_step):
 model.opt.zo_update(model)
 ```
 
-### 2. Supervised Fine-Tuning HF Models with ZOSFTTrainer
+### 2. Supervised Fine-Tuning HF Models with ZOTrainer / ZOSFTTrainer
 
 ```python
 from zo2 import ZOConfig, zo_hf_init
-from zo2.hf_trl import ZOSFTTrainer
+from zo2.hf_trl import ZOTrainer, ZOSFTTrainer
 from transformers import TrainingArguments
 
 # Model and optimizer init
@@ -80,7 +80,7 @@ with zo_hf_init(zo_config):
 
 training_args = TrainingArguments("test-trainer")
 
-trainer = ZOSFTTrainer(
+trainer = ZOSFTTrainer(  # or ZOTrainer
     model,
     args = training_args,
     train_dataset=...,   # get training dataset
@@ -93,6 +93,8 @@ trainer = ZOSFTTrainer(
 
 trainer.train()
 ```
+
+### 3. Using [MeZO-Runner](example/mezo_runner/README.md) to evaluate fine-tuning tasks
 
 ## ✨ Tutorial
 

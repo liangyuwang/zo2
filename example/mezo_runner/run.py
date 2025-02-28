@@ -112,8 +112,8 @@ class OurArguments(TrainingArguments):
     # Auto saving when interrupted
     save_on_interrupt: bool = False # save model when interrupted (useful for long training)
 
-    # ZO2 configs
-    zo_method: str = "zo"
+    # ZO2 added -> ZO2 configs
+    zo_method: str = "zo2"
     offloading_device: str = "cpu"
     working_device: str = "cuda:0"
 
@@ -181,7 +181,12 @@ class Framework:
             #         load_in_8bit=self.args.load_int8,
             #     )
 
-            # ZO2 added ->
+            # ZO2 added -> init ZO2 model
+            torch_dtype = torch.float32
+            if self.args.load_float16:
+                torch_dtype = torch.float16
+            elif self.args.load_bfloat16:
+                torch_dtype = torch.bfloat16
             # Set up ZO configuration
             self.zo_config = ZOConfig(
                 method="mezo-sgd",
@@ -192,13 +197,7 @@ class Framework:
                 offloading_device=self.args.offloading_device,
                 working_device=self.args.working_device,
             )
-
             # Initialize model within zo_hf_init context
-            torch_dtype = torch.float32
-            if self.args.load_float16:
-                torch_dtype = torch.float16
-            elif self.args.load_bfloat16:
-                torch_dtype = torch.bfloat16
             with zo_hf_init(self.zo_config):
                 from transformers import OPTForCausalLM
                 model = OPTForCausalLM.from_pretrained(
@@ -444,13 +443,13 @@ class Framework:
             train_dataset = HFDataset(_convert(train_samples))
             eval_dataset = HFDataset(_convert(eval_samples))
         
-        # if self.args.only_train_option and not self.args.non_diff:
+        if self.args.only_train_option and not self.args.non_diff:
         #     # If --only_train_option and not with a non-differentiable objective, we wrap the forward function
         #     self.model.original_forward = self.model.forward
         #     self.model.forward = forward_wrap_with_option_len.__get__(self.model, type(self.model))
-
-        # ZO2 added ->
-        self.model.zo_custom_train_loss_fn = custom_loss_fn
+            # ZO2 added -> register custom loss functions
+            self.model.zo_custom_train_loss_fn = custom_loss_fn_with_option_len
+            self.model.zo_custom_eval_loss_fn = custom_loss_fn_with_option_len
 
         if self.args.non_diff:
             collator = NondiffCollator
@@ -492,13 +491,16 @@ class Framework:
         # FSDP compatibility
         self.model = trainer.model 
         
-        # # Reset the forward function for evaluation
-        # if self.args.only_train_option and not self.args.non_diff:
+        # Reset the forward function for evaluation
+        if self.args.only_train_option and not self.args.non_diff:
         #     if type(self.model) == FSDP:
         #         logger.info("This is an FSDP model now. Be careful when assigning back the original forward function")
         #         self.model._fsdp_wrapped_module.forward = self.model._fsdp_wrapped_module.original_forward
         #     else:
         #         self.model.forward = self.model.original_forward
+            # ZO2 added -> remove the custom loss functions for evaluation
+            self.model.zo_custom_train_loss_fn = None
+            self.model.zo_custom_eval_loss_fn = None
 
 
 def result_file_tag(args):

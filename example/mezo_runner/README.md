@@ -12,7 +12,7 @@ python run.py {ARGUMENTS}
 
 Please read `run.py` for a complete list of arguments. We introduce some of the most important ones below.
 
-* `--num_train`: Number of training examples. For ICL, this is the number of demonstrations.
+* `--num_train`: Number of training examples.
 * `--num_dev`: Number of validation examples.
 * `--num_test`: Number of testing examples.
 * `--model_name`: HuggingFace model name or path.
@@ -23,5 +23,5 @@ Please read `run.py` for a complete list of arguments. We introduce some of the 
 
 ```bash
 # MeZO (full-parameter fine-tuning)
-MODEL=facebook/opt-13b TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 STEPS=4000 EVAL_STEPS=4000 bash mezo.sh
+MODEL=facebook/opt-6.7b TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 STEPS=4000 EVAL_STEPS=2000 bash mezo.sh
 ```
