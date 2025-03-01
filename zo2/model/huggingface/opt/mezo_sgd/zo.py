@@ -390,9 +390,9 @@ class OptimizerOPTForCausalLM(MeZOSGD):
 
         logits = self.model.lm_head(outputs[0]).contiguous()
 
-        if self.model.zo_loss_fn_pre_hooks != []:
-            for pre_hook_fn in self.model.zo_loss_fn_pre_hooks:
-                input_ids, logits, labels = pre_hook_fn(self, input_ids, logits, labels)
+        if self.model.zo_train_loss_fn_pre_hooks != []:
+            for pre_hook_fn in self.model.zo_train_loss_fn_pre_hooks:
+                input_ids, logits, labels = pre_hook_fn(self.model, input_ids, logits, labels)
 
         loss = None
         if self.model.zo_custom_train_loss_fn:
@@ -405,9 +405,9 @@ class OptimizerOPTForCausalLM(MeZOSGD):
             loss_fct = CrossEntropyLoss()
             loss = loss_fct(shift_logits.view(-1, self.model.config.vocab_size), shift_labels.view(-1))
 
-        if self.model.zo_loss_fn_post_hooks != []:
-            for post_hook_fn in self.model.zo_loss_fn_post_hooks:
-                loss, input_ids, logits, labels = post_hook_fn(self, loss, input_ids, logits, labels)
+        if self.model.zo_train_loss_fn_post_hooks != []:
+            for post_hook_fn in self.model.zo_train_loss_fn_post_hooks:
+                loss, input_ids, logits, labels = post_hook_fn(self.model, loss, input_ids, logits, labels)
 
         # add --> only return loss
         return loss.detach()
@@ -428,6 +428,10 @@ class OptimizerOPTForCausalLM(MeZOSGD):
         return_dict: Optional[bool] = None,
         **kwargs
     ) -> Union[Tuple, CausalLMOutputWithPast]:
+        if self.model.zo_eval_loss_fn_pre_hooks != []:
+            for pre_hook_fn in self.model.zo_eval_loss_fn_pre_hooks:
+                input_ids, logits, labels = pre_hook_fn(self.model, input_ids, logits, labels)
+
         if self.model.zo_custom_eval_loss_fn:
             output = eval_fn(input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, None, use_cache, 
@@ -450,6 +454,10 @@ class OptimizerOPTForCausalLM(MeZOSGD):
             output = eval_fn(input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, labels, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
+        
+        if self.model.zo_eval_loss_fn_post_hooks != []:
+            for post_hook_fn in self.model.zo_eval_loss_fn_post_hooks:
+                output, input_ids, logits, labels = post_hook_fn(self.model, output, input_ids, logits, labels)
         return output
     
 
@@ -468,6 +476,7 @@ class OptimizerOPTForSequenceClassification(MeZOSGD):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        **kwargs
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
         """
             copy the original forward code and replace all 'self' to 'self.model'.
@@ -508,8 +517,14 @@ class OptimizerOPTForSequenceClassification(MeZOSGD):
 
         pooled_logits = logits[torch.arange(batch_size, device=logits.device), sequence_lengths]
 
+        if self.model.zo_train_loss_fn_pre_hooks != []:
+            for pre_hook_fn in self.model.zo_train_loss_fn_pre_hooks:
+                input_ids, logits, labels = pre_hook_fn(self.model, input_ids, logits, labels)
+
         loss = None
-        if labels is not None:
+        if self.model.zo_custom_train_loss_fn:
+            loss = self.model.zo_custom_train_loss_fn(self.model, input_ids, logits, labels, **kwargs)
+        elif labels is not None:
             if self.model.config.problem_type is None:
                 if self.model.num_labels == 1:
                     self.model.config.problem_type = "regression"
@@ -531,6 +546,10 @@ class OptimizerOPTForSequenceClassification(MeZOSGD):
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(pooled_logits, labels)
         
+        if self.model.zo_train_loss_fn_post_hooks != []:
+            for post_hook_fn in self.model.zo_train_loss_fn_post_hooks:
+                loss, input_ids, logits, labels = post_hook_fn(self.model, loss, input_ids, logits, labels)
+
         # add --> only return loss
         if self.model.zo_training:
             return loss.detach()
@@ -549,10 +568,38 @@ class OptimizerOPTForSequenceClassification(MeZOSGD):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        **kwargs
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
-        output = eval_fn(input_ids, attention_mask, head_mask, 
+        if self.model.zo_eval_loss_fn_pre_hooks != []:
+            for pre_hook_fn in self.model.zo_eval_loss_fn_pre_hooks:
+                input_ids, logits, labels = pre_hook_fn(self.model, input_ids, logits, labels)
+
+        if self.model.zo_custom_eval_loss_fn:
+            output = eval_fn(input_ids, attention_mask, head_mask, 
+                past_key_values, inputs_embeds, None, use_cache, 
+                output_attentions, output_hidden_states, return_dict)
+            if not return_dict:
+                logits = output[0]
+                loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, logits, labels, **kwargs)
+                output = (logits,) + output[1]
+                return (loss,) + output if loss is not None else output
+            logits = output["logits"]
+            loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, logits, labels, **kwargs)
+            output = CausalLMOutputWithPast(
+                loss=loss,
+                logits=logits,
+                past_key_values=output["past_key_values"],
+                hidden_states=output["hidden_states"],
+                attentions=output["attentions"],
+            )
+        else:
+            output = eval_fn(input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, labels, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
+        
+        if self.model.zo_eval_loss_fn_post_hooks != []:
+            for post_hook_fn in self.model.zo_eval_loss_fn_post_hooks:
+                output, input_ids, logits, labels = post_hook_fn(self.model, output, input_ids, logits, labels)
         return output
 
 
@@ -572,6 +619,7 @@ class OptimizerOPTForQuestionAnswering(MeZOSGD):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        **kwargs
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
         """
             copy the original forward code and replace all 'self' to 'self.model'.
@@ -597,8 +645,15 @@ class OptimizerOPTForQuestionAnswering(MeZOSGD):
         start_logits = start_logits.squeeze(-1).contiguous()
         end_logits = end_logits.squeeze(-1).contiguous()
 
+        if self.model.zo_train_loss_fn_pre_hooks != []:
+            for pre_hook_fn in self.model.zo_train_loss_fn_pre_hooks:
+                input_ids, start_logits, start_positions, end_logits, end_positions = \
+                    pre_hook_fn(self.model, input_ids, start_logits, start_positions, end_logits, end_positions)
+
         total_loss = None
-        if start_positions is not None and end_positions is not None:
+        if self.model.zo_custom_train_loss_fn:
+            loss = self.model.zo_custom_train_loss_fn(self.model, input_ids, start_logits, start_positions, end_logits, end_positions, **kwargs)
+        elif start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, split add a dimension
             if len(start_positions.size()) > 1:
                 start_positions = start_positions.squeeze(-1)
@@ -613,6 +668,11 @@ class OptimizerOPTForQuestionAnswering(MeZOSGD):
             start_loss = loss_fct(start_logits, start_positions)
             end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
+
+        if self.model.zo_train_loss_fn_post_hooks != []:
+            for post_hook_fn in self.model.zo_train_loss_fn_post_hooks:
+                loss, input_ids, start_logits, start_positions, end_logits, end_positions = \
+                    post_hook_fn(self.model, loss, input_ids, start_logits, start_positions, end_logits, end_positions)
 
         # add --> only return loss
         if self.model.zo_training:
@@ -633,8 +693,37 @@ class OptimizerOPTForQuestionAnswering(MeZOSGD):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        **kwargs
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
-        output = eval_fn(input_ids, attention_mask, head_mask, 
+        if self.model.zo_eval_loss_fn_pre_hooks != []:
+            for pre_hook_fn in self.model.zo_eval_loss_fn_pre_hooks:
+                input_ids, start_logits, start_positions, end_logits, end_positions = pre_hook_fn(self.model, input_ids, start_logits, start_positions, end_logits, end_positions)
+
+        if self.model.zo_custom_eval_loss_fn:
+            output = eval_fn(input_ids, attention_mask, head_mask, 
+                past_key_values, inputs_embeds, None, None, use_cache, 
+                output_attentions, output_hidden_states, return_dict)
+            if not return_dict:
+                start_logits, end_logits = output[0], output[1]
+                loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, start_logits, start_positions, end_logits, end_positions, **kwargs)
+                output = (start_logits, end_logits) + output[2:]
+                return (loss,) + output if loss is not None else output
+            start_logits = output["start_logits"]
+            end_logits = output["end_logits"]
+            loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, start_logits, start_positions, end_logits, end_positions, **kwargs)
+            output = QuestionAnsweringModelOutput(
+                loss=loss,
+                start_logits=start_logits,
+                end_logits=end_logits,
+                hidden_states=output["hidden_states"],
+                attentions=output["attentions"],
+            )
+        else:
+            output = eval_fn(input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, start_positions, end_positions, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
+        
+        if self.model.zo_eval_loss_fn_post_hooks != []:
+            for post_hook_fn in self.model.zo_eval_loss_fn_post_hooks:
+                output, input_ids, start_logits, start_positions, end_logits, end_positions = post_hook_fn(self.model, output, input_ids, start_logits, start_positions, end_logits, end_positions)
         return output
