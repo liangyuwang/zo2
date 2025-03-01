@@ -57,10 +57,12 @@ def eval_mezo_sgd_causalLM(model_config, zo_config, device='cuda'):
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
     torch.set_default_dtype(original_dtype)
-    model.zo_train()
-    model.zo_eval()
-    loss = model(input_ids=input_ids, labels=labels)["loss"]
-    print(f"loss: {loss}")
+    for i in tqdm(range(args.max_steps)):
+        model.zo_train()
+        model.zo_eval()
+        loss = model(input_ids=input_ids, labels=labels)["loss"]
+        res = "Iteration {}, loss: {}"
+        tqdm.write(res.format(i, loss))
 
 def eval_mezo2_sgd_causalLM(model_config, zo_config, device='cuda'):
     input_ids, labels = prepare_data_for_causalLM(
@@ -71,10 +73,12 @@ def eval_mezo2_sgd_causalLM(model_config, zo_config, device='cuda'):
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
     torch.set_default_dtype(original_dtype)
-    model.zo_train()
-    model.zo_eval()
-    loss = model(input_ids=input_ids, labels=labels)["loss"]
-    print(f"loss: {loss}")
+    for i in tqdm(range(args.max_steps)):
+        model.zo_train()
+        model.zo_eval()
+        loss = model(input_ids=input_ids, labels=labels)["loss"]
+        res = "Iteration {}, loss: {}"
+        tqdm.write(res.format(i, loss))
 
 
 def train_mezo_sgd_sequence_classification(model_config, zo_config, device='cuda'):
@@ -118,10 +122,12 @@ def eval_mezo_sgd_sequence_classification(model_config, zo_config, device='cuda'
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
     torch.set_default_dtype(original_dtype)
-    model.zo_train()
-    model.zo_eval()
-    loss = model(input_ids=input_ids, labels=labels)["loss"]
-    print(f"loss: {loss}")
+    for i in tqdm(range(args.max_steps)):
+        model.zo_train()
+        model.zo_eval()
+        loss = model(input_ids=input_ids, labels=labels)["loss"]
+        res = "Iteration {}, loss: {}"
+        tqdm.write(res.format(i, loss))
 
 def eval_mezo2_sgd_sequence_classification(model_config, zo_config, device='cuda'):
     input_ids, labels = prepare_data_for_sequence_classification(
@@ -132,10 +138,12 @@ def eval_mezo2_sgd_sequence_classification(model_config, zo_config, device='cuda
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
     torch.set_default_dtype(original_dtype)
-    model.zo_train()
-    model.zo_eval()
-    loss = model(input_ids=input_ids, labels=labels)["loss"]
-    print(f"loss: {loss}")
+    for i in tqdm(range(args.max_steps)):
+        model.zo_train()
+        model.zo_eval()
+        loss = model(input_ids=input_ids, labels=labels)["loss"]
+        res = "Iteration {}, loss: {}"
+        tqdm.write(res.format(i, loss))
 
 
 def train_mezo_sgd_question_answering(model_config, zo_config, device='cuda'):
@@ -179,10 +187,12 @@ def eval_mezo_sgd_question_answering(model_config, zo_config, device='cuda'):
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
     torch.set_default_dtype(original_dtype)
-    model.zo_train()
-    model.zo_eval()
-    loss = model(input_ids=input_ids, start_positions=start_positions, end_positions=end_positions)["loss"]
-    print(f"loss: {loss}")
+    for i in tqdm(range(args.max_steps)):
+        model.zo_train()
+        model.zo_eval()
+        loss = model(input_ids=input_ids, start_positions=start_positions, end_positions=end_positions)["loss"]
+        res = "Iteration {}, loss: {}"
+        tqdm.write(res.format(i, loss))
 
 def eval_mezo2_sgd_question_answering(model_config, zo_config, device='cuda'):
     input_ids, start_positions, end_positions = prepare_data_for_question_answering(
@@ -193,10 +203,12 @@ def eval_mezo2_sgd_question_answering(model_config, zo_config, device='cuda'):
     total_parameters = model_size(model)["total"]
     print(f"model size: {total_parameters/1024**3:.2f} B")
     torch.set_default_dtype(original_dtype)
-    model.zo_train()
-    model.zo_eval()
-    loss = model(input_ids=input_ids, start_positions=start_positions, end_positions=end_positions)["loss"]
-    print(f"loss: {loss}")
+    for i in tqdm(range(args.max_steps)):
+        model.zo_train()
+        model.zo_eval()
+        loss = model(input_ids=input_ids, start_positions=start_positions, end_positions=end_positions)["loss"]
+        res = "Iteration {}, loss: {}"
+        tqdm.write(res.format(i, loss))
 
 
 def test_mezo_sgd_causalLM_training():

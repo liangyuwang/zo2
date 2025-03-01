@@ -40,9 +40,11 @@ def eval_mezo_sgd(model, args, model_config, device='cuda'):
     print(f"model size: {total_parameters/1024**3:.2f} B")
     print("Init dataset")
     input_ids, pos, labels = prepare_data(model_config.vocab_size, args.batch_size, model_config.block_size, device=device)
-    model.zo_eval()
-    loss = model(input_ids, pos, labels)[-1]
-    print(f"loss: {loss}")
+    for i in tqdm(range(args.max_steps)):
+        model.zo_eval()
+        loss = model(input_ids, pos, labels)[-1]
+        res = "Iteration {}, loss: {}"
+        tqdm.write(res.format(i, loss))
 
 def eval_mezo2_sgd(model, args, model_config, device='cuda'):
     seed_everything(args.seed)
@@ -50,9 +52,11 @@ def eval_mezo2_sgd(model, args, model_config, device='cuda'):
     print(f"model size: {total_parameters/1024**3:.2f} B")
     print("Init dataset")
     input_ids, pos, labels = prepare_data(model_config.vocab_size, args.batch_size, model_config.block_size, device=device)
-    model.zo_eval()
-    loss = model(input_ids, pos, labels)[-1]
-    print(f"loss: {loss}")
+    for i in tqdm(range(args.max_steps)):
+        model.zo_eval()
+        loss = model(input_ids, pos, labels)[-1]
+        res = "Iteration {}, loss: {}"
+        tqdm.write(res.format(i, loss))
 
 def test_mezo_sgd_training():
     seed_everything(args.seed)

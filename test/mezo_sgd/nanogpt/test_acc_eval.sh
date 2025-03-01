@@ -25,14 +25,14 @@ do
 
     echo "Comparing outputs..."
     echo -e "Model: $model_id"
-    paste <(grep 'loss' $OUT1) <(grep 'loss' $OUT2) | awk -v green="$GREEN" -v red="$RED" -v nc="$NC" '{
+    paste <(grep 'Iteration' $OUT1) <(grep 'Iteration' $OUT2) | awk -v green="$GREEN" -v red="$RED" -v nc="$NC" '{
         split($2, loss1, ":");
-        split($6, loss2, ":");
+        split($7, loss2, ":");
         diff_loss = loss1[2] - loss2[2];
         if (loss1[2] == loss2[2])
-            printf "%s✓ Loss match.%s\n", green, nc;  # Ensure that color reset applies only to the check mark and message
+            printf "Iteration %s: %s✓ loss match.%s\n", $2, green, nc;
         else
-            printf "%s✗ Mismatch! ZO (loss): (%s), ZO2 (loss): (%s)\n \tLoss diff: %.6f%s\n", red, loss1[2], loss2[2], diff_loss, nc;
+            printf "Iteration %s: %s✗ Mismatch! ZO (loss): (%s), ZO2 (loss): (%s) \tLoss diff: %.6f%s\n", $2, red, loss1[2], loss2[2], diff_loss, nc;
     }'
 
     rm $OUT1 $OUT2
