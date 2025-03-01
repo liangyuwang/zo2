@@ -31,14 +31,7 @@ from typing import List, Optional, Tuple, Union
 from ....base import BaseZOModel
 from .....optimizer.mezo_sgd.zo2 import MeZO2SGD
 from .....config.mezo_sgd import MeZOSGDConfig
-from .utils import (
-    fn_get_opt_decoder_hidden_states_from_layer_outputs,
-    get_shift_logits,
-    get_shift_labels,
-    get_pooled_logits,
-    get_start_logits_and_end_logits,
-    get_qa_loss
-)
+from .utils import *
 
 logger = logging.get_logger(__name__)
 
@@ -112,7 +105,7 @@ class OPTDecoder(modeling_opt.OPTDecoder, OPTPreTrainedModel, BaseZOModel):
                 past_key_values, inputs_embeds, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
         else:
-            return self.opt.zo_eval_forward(super().forward, input_ids, attention_mask, head_mask, 
+            return self.opt.zo_eval_forward(input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
 
@@ -154,7 +147,7 @@ class OPTModel(modeling_opt.OPTModel, OPTPreTrainedModel, BaseZOModel):
                 past_key_values, inputs_embeds, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
         else:
-            return self.opt.zo_eval_forward(super().forward, input_ids, attention_mask, head_mask, 
+            return self.opt.zo_eval_forward(input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, use_cache, 
                 output_attentions, output_hidden_states, return_dict)
 
@@ -271,7 +264,7 @@ class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel, BaseZOMode
                 past_key_values, inputs_embeds, labels, use_cache, 
                 output_attentions, output_hidden_states, return_dict, **kwargs)
         else:
-            return self.opt.zo_eval_forward(super().forward, 
+            return self.opt.zo_eval_forward(
                 input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, labels, use_cache, 
                 output_attentions, output_hidden_states, return_dict, **kwargs)
@@ -326,7 +319,7 @@ class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, OP
                 past_key_values, inputs_embeds, labels, use_cache, 
                 output_attentions, output_hidden_states, return_dict, **kwargs)
         else:
-            return self.opt.zo_eval_forward(super().forward, 
+            return self.opt.zo_eval_forward(
                 input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, labels, use_cache, 
                 output_attentions, output_hidden_states, return_dict, **kwargs)
@@ -412,7 +405,7 @@ class OPTForQuestionAnswering(modeling_opt.OPTForQuestionAnswering, OPTPreTraine
                 past_key_values, inputs_embeds, start_positions, end_positions, use_cache, 
                 output_attentions, output_hidden_states, return_dict, **kwargs)
         else:
-            return self.opt.zo_eval_forward(super().forward, 
+            return self.opt.zo_eval_forward(
                 input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, start_positions, end_positions, use_cache, 
                 output_attentions, output_hidden_states, return_dict, **kwargs)
@@ -710,7 +703,6 @@ class OptimizerOPTDecoder(MeZO2SGD):
     @torch.inference_mode
     def inner_zo_eval_forward(
         self,
-        eval_fn,
         input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         head_mask: Optional[torch.Tensor] = None,
@@ -721,12 +713,296 @@ class OptimizerOPTDecoder(MeZO2SGD):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-        handles = self.add_zo2_eval_comm_hooks(self.model.layers)
-        output = eval_fn(input_ids, attention_mask, head_mask, 
-            past_key_values, inputs_embeds, use_cache, 
-            output_attentions, output_hidden_states, return_dict)
-        self.clear_zo2_eval_comm_hooks(handles)
-        return output
+        output_attentions = output_attentions if output_attentions is not None else self.model.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.model.config.output_hidden_states
+        )
+        use_cache = use_cache if use_cache is not None else self.model.config.use_cache
+
+        return_dict = return_dict if return_dict is not None else self.model.config.use_return_dict
+
+        # retrieve input_ids and inputs_embeds
+        if input_ids is not None and inputs_embeds is not None:
+            raise ValueError("You cannot specify both decoder_input_ids and decoder_inputs_embeds at the same time")
+        elif input_ids is not None:
+            input_shape = input_ids.size()
+            input_ids = input_ids.view(-1, input_shape[-1])
+        elif inputs_embeds is not None:
+            input_shape = inputs_embeds.size()[:-1]
+        else:
+            raise ValueError("You have to specify either decoder_input_ids or decoder_inputs_embeds")
+
+        if inputs_embeds is None:
+            # inputs_embeds = self.model.embed_tokens(input_ids)
+            inputs_embeds = self.task_compute_module(self.model.embed_tokens, 
+                                                     inputs1={"input": input_ids},
+                                                     inputs2=None,
+                                                     grad=None)
+
+        batch_size, seq_length = input_shape
+        past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
+        # required mask seq length can be calculated via length of past
+        mask_seq_length = past_key_values_length + seq_length
+
+        # embed positions
+        if attention_mask is None:
+            attention_mask = torch.ones(batch_size, mask_seq_length, device=inputs_embeds.device)
+        # causal_attention_mask = self.model._prepare_decoder_attention_mask(
+        #     attention_mask, input_shape, inputs_embeds, past_key_values_length
+        # )
+        causal_attention_mask = self.task_compute_function(
+            self.model._prepare_decoder_attention_mask,
+            inputs1={"attention_mask": attention_mask, "input_shape": input_shape, 
+                     "inputs_embeds": inputs_embeds, "past_key_values_length": past_key_values_length},
+            inputs2=None
+        )
+        # pos_embeds = self.model.embed_positions(attention_mask, past_key_values_length)
+        pos_embeds = self.task_compute_module(self.model.embed_positions,
+                                            inputs1={"attention_mask": attention_mask, "past_key_values_length": past_key_values_length},
+                                            inputs2=None,
+                                            grad=None,
+                                            compute_sync=False)
+
+        if self.model.project_in is not None:
+            # inputs_embeds = self.model.project_in(inputs_embeds)
+            inputs_embeds = self.task_compute_module(self.model.project_in,
+                                                    inputs1={"input": inputs_embeds},
+                                                    inputs2=None,
+                                                    grad=None,
+                                                    compute_sync=False)
+
+        # hidden_states = inputs_embeds + pos_embeds
+        hidden_states = self.task_compute_function(torch.add,
+                                                inputs1={"input": inputs_embeds, "other": pos_embeds},
+                                                inputs2=None,
+                                                compute_sync=False)
+        
+        if self.model.gradient_checkpointing and self.model.training:
+            if use_cache:
+                logger.warning_once(
+                    "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`..."
+                )
+                use_cache = False
+        
+        # decoder layers
+        # all_hidden_states = () if output_hidden_states else None
+        # all_self_attns = () if output_attentions else None
+        # next_decoder_cache = () if use_cache else None
+        all_hidden_states = self.task_compute_function(init_all_hidden_states,
+                                                       inputs1={"output_hidden_states": output_hidden_states},
+                                                       inputs2=None,
+                                                       compute_sync=False)
+        all_self_attns = self.task_compute_function(init_all_self_attns,
+                                                    inputs1={"output_attentions": output_attentions},
+                                                    inputs2=None,
+                                                    compute_sync=False)
+        next_decoder_cache = self.task_compute_function(init_next_decoder_cache,
+                                                        inputs1={"use_cache": use_cache},
+                                                        inputs2=None,
+                                                        compute_sync=False)
+
+        if 0 in self.offloading_blocks:
+            self.model.layers[0] = self.task_upload(
+                module=self.model.layers[0],
+                device=self.device
+            )
+
+        # check if head_mask has a correct number of layers specified if desired
+        for attn_mask, mask_name in zip([head_mask], ["head_mask"]):
+            if attn_mask is not None:
+                if attn_mask.size()[0] != (len(self.model.layers)):
+                    raise ValueError(
+                        f"The `{mask_name}` should be specified for {len(self.model.layers)} layers, but it is for"
+                        f" {head_mask.size()[0]}."
+                    )
+
+        # for idx, decoder_layer in enumerate(self.model.layers):
+        #     # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
+        #     if output_hidden_states:
+        #         all_hidden_states += (hidden_states,)
+
+        #     dropout_probability = random.uniform(0, 1)
+        #     if self.model.training and (dropout_probability < self.model.layerdrop):
+        #         continue
+
+        #     past_key_value = past_key_values[idx] if past_key_values is not None else None
+
+        #     if self.model.gradient_checkpointing and self.model.training:
+
+        #         def create_custom_forward(module):
+        #             def custom_forward(*inputs):
+        #                 # None for past_key_value
+        #                 return module(*inputs, output_attentions, None)
+
+        #             return custom_forward
+
+        #         layer_outputs = torch.utils.checkpoint.checkpoint(
+        #             create_custom_forward(decoder_layer),
+        #             hidden_states,
+        #             causal_attention_mask,
+        #             head_mask[idx] if head_mask is not None else None,
+        #             None,
+        #         )
+        #     else:
+        #         layer_outputs = decoder_layer(
+        #             hidden_states,
+        #             attention_mask=causal_attention_mask,
+        #             layer_head_mask=(head_mask[idx] if head_mask is not None else None),
+        #             past_key_value=past_key_value,
+        #             output_attentions=output_attentions,
+        #             use_cache=use_cache,
+        #         )
+
+        #     hidden_states = layer_outputs[0]
+
+        #     if use_cache:
+        #         next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
+
+        #     if output_attentions:
+        #         all_self_attns += (layer_outputs[1],)
+
+        N = len(self.model.layers)
+        for i in range(1, N):
+
+            if i != 1:
+                if i-2 in self.offloading_blocks:
+                    self.model.layers[i-2] = self.task_offload(
+                        module=self.model.layers[i-2],
+                        device=self.offloading_device)
+            
+            all_hidden_states = self.task_compute_function(
+                fn=update_all_hidden_states,
+                inputs1={"output_hidden_states": output_hidden_states, "all_hidden_states": all_hidden_states, "hidden_states": hidden_states},
+                inputs2=None,
+                compute_sync=False)
+
+            past_key_value = self.task_compute_function(
+                fn=get_past_key_value,
+                inputs1={"past_key_values": past_key_values, "idx": i},
+                inputs2=None,
+                compute_sync=False)
+
+            # layer_outputs = decoder_layer(
+            #     hidden_states,
+            #     attention_mask=causal_attention_mask,
+            #     layer_head_mask=(head_mask[idx] if head_mask is not None else None),
+            #     output_attentions=output_attentions,
+            #     use_cache=use_cache,
+            # )
+            layer_outputs = self.task_compute_module(
+                self.model.layers[i-1],
+                inputs1={"hidden_states": hidden_states, "attention_mask": causal_attention_mask, 
+                            "layer_head_mask": (head_mask[i-1] if head_mask is not None else None),
+                            "past_key_value": past_key_value,
+                            "output_attentions": output_attentions,
+                            "use_cache": use_cache},
+                inputs2=None,
+                grad=None)
+        
+            # hidden_states = layer_outputs[0]
+            hidden_states = self.task_compute_function(
+                fn=fn_get_opt_decoder_hidden_states_from_layer_outputs,
+                inputs1={"input": layer_outputs},
+                inputs2=None,
+                compute_sync=False)
+            
+            next_decoder_cache = self.task_compute_function(
+                fn=update_next_decoder_cache,
+                inputs1={"use_cache": use_cache, "next_decoder_cache": next_decoder_cache, "layer_outputs": layer_outputs, "output_attentions": output_attentions},
+                inputs2=None,
+                compute_sync=False)
+
+            all_self_attns = self.task_compute_function(
+                fn=update_all_self_attns,
+                inputs1={"output_attentions": output_attentions, "all_self_attns": all_self_attns, "layer_outputs": layer_outputs},
+                inputs2=None,
+                compute_sync=True)  # need to be optimized
+            
+            if i in self.offloading_blocks:
+                self.model.layers[i] = self.task_upload(
+                    module=self.model.layers[i],
+                    device=self.device)
+
+        if N-2 in self.offloading_blocks:
+            self.model.layers[N-2] = self.task_offload(
+                module=self.model.layers[N-2],
+                device=self.offloading_device)
+        
+        all_hidden_states = self.task_compute_function(
+            fn=update_all_hidden_states,
+            inputs1={"output_hidden_states": output_hidden_states, "all_hidden_states": all_hidden_states, "hidden_states": hidden_states},
+            inputs2=None)
+
+        layer_outputs = self.task_compute_module(
+            self.model.layers[N-1],
+            inputs1={"hidden_states": hidden_states, "attention_mask": causal_attention_mask, 
+                        "layer_head_mask": (head_mask[i-1] if head_mask is not None else None),
+                        "past_key_value": past_key_value,
+                        "output_attentions": output_attentions,
+                        "use_cache": use_cache},
+            inputs2=None,
+            grad=None)
+
+        hidden_states = self.task_compute_function(
+            fn=fn_get_opt_decoder_hidden_states_from_layer_outputs,
+            inputs1={"input": layer_outputs},
+            inputs2=None,
+            compute_sync=False)
+
+        next_decoder_cache = self.task_compute_function(
+            fn=update_next_decoder_cache,
+            inputs1={"use_cache": use_cache, "next_decoder_cache": next_decoder_cache, "layer_outputs": layer_outputs, "output_attentions": output_attentions},
+            inputs2=None,
+            compute_sync=False)
+
+        all_self_attns = self.task_compute_function(
+            fn=update_all_self_attns,
+            inputs1={"output_attentions": output_attentions, "all_self_attns": all_self_attns, "layer_outputs": layer_outputs},
+            inputs2=None,
+            compute_sync=False
+        )
+            
+        if N-1 in self.offloading_blocks:
+            self.model.layers[N-1] = self.task_offload(
+                module=self.model.layers[N-1],
+                device=self.offloading_device)
+            
+        if self.model.final_layer_norm is not None:
+            # hidden_states = self.model.final_layer_norm(hidden_states)
+            hidden_states = self.task_compute_module(
+                module=self.model.final_layer_norm,
+                inputs1={"input": hidden_states},
+                inputs2=None,
+                grad=None)
+
+        if self.model.project_out is not None:
+            # hidden_states = self.model.project_out(hidden_states)
+            hidden_states = self.task_compute_module(
+                module=self.model.project_out,
+                inputs1={"input": hidden_states},
+                inputs2=None,
+                grad=None,
+                compute_sync=False)
+
+        # add hidden states from the last decoder layer
+        # if output_hidden_states:
+        #     all_hidden_states += (hidden_states,)
+        all_hidden_states = self.task_compute_function(
+            fn=update_all_hidden_states,
+            inputs1={"output_hidden_states": output_hidden_states, "all_hidden_states": all_hidden_states, "hidden_states": hidden_states},
+            inputs2=None,
+            compute_sync=False
+        )
+
+        next_cache = next_decoder_cache if use_cache else None
+        if not return_dict:
+            return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
+        return BaseModelOutputWithPast(
+            last_hidden_state=hidden_states,
+            past_key_values=next_cache,
+            hidden_states=all_hidden_states,
+            attentions=all_self_attns,
+        )
 
 
 class OptimizerOPTModel(MeZO2SGD):
@@ -796,7 +1072,6 @@ class OptimizerOPTModel(MeZO2SGD):
     @torch.inference_mode
     def inner_zo_eval_forward(
         self,
-        eval_fn,
         input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         head_mask: Optional[torch.Tensor] = None,
@@ -807,13 +1082,38 @@ class OptimizerOPTModel(MeZO2SGD):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
+        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+        )
+        use_cache = use_cache if use_cache is not None else self.config.use_cache
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
         self.model.decoder.zo_training = False
         self.assign_zo2_attributes(self, self.model.decoder.opt)
-        output = eval_fn(input_ids, attention_mask, head_mask, 
-            past_key_values, inputs_embeds, use_cache, 
-            output_attentions, output_hidden_states, return_dict)
+        # decoder outputs consists of (dec_features, past_key_value, dec_hidden, dec_attn)
+        decoder_outputs = self.decoder(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
         self.assign_zo2_attributes(self.model.decoder.opt, self)
-        return output
+
+        if not return_dict:
+            return decoder_outputs
+
+        return BaseModelOutputWithPast(
+            last_hidden_state=decoder_outputs.last_hidden_state,
+            past_key_values=decoder_outputs.past_key_values,
+            hidden_states=decoder_outputs.hidden_states,
+            attentions=decoder_outputs.attentions,
+        )
 
 
 class OptimizerOPTForCausalLM(MeZO2SGD):
@@ -924,7 +1224,6 @@ class OptimizerOPTForCausalLM(MeZO2SGD):
     @torch.inference_mode
     def inner_zo_eval_forward(
         self,
-        eval_fn,
         input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         head_mask: Optional[torch.Tensor] = None,
@@ -937,40 +1236,88 @@ class OptimizerOPTForCausalLM(MeZO2SGD):
         return_dict: Optional[bool] = None,
         **kwargs
     ) -> Union[Tuple, CausalLMOutputWithPast]:
+
+        output_attentions = output_attentions if output_attentions is not None else self.model.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.model.config.output_hidden_states
+        )
+        return_dict = return_dict if return_dict is not None else self.model.config.use_return_dict
+
         self.model.model.decoder.zo_training = False
         self.assign_zo2_attributes(self, self.model.model.decoder.opt)
+        outputs = self.model.model.decoder(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        self.assign_zo2_attributes(self.model.model.decoder.opt, self)
+
+        hidden_states = self.task_compute_function(
+            fn_get_opt_decoder_hidden_states_from_layer_outputs,
+            inputs1={"input": outputs},
+            inputs2=None,
+            compute_sync=False
+        )
+        
+        logits = self.task_compute_module(self.model.lm_head,
+                                        inputs1={"input": hidden_states},
+                                        inputs2=None,
+                                        grad=self.projected_grad)
+
         if self.model.zo_eval_loss_fn_pre_hooks != []:
             for pre_hook_fn in self.model.zo_eval_loss_fn_pre_hooks:
-                input_ids, logits, labels = pre_hook_fn(self.model, input_ids, logits, labels)
-
+                input_ids, logits, labels = \
+                    self.task_compute_function(pre_hook_fn,
+                        inputs1={"self": self.model, "input_ids": input_ids, "logits": logits, "labels": labels},
+                        inputs2=None)
+        
+        loss = None
         if self.model.zo_custom_eval_loss_fn:
-            output = eval_fn(input_ids, attention_mask, head_mask, 
-                past_key_values, inputs_embeds, None, use_cache, 
-                output_attentions, output_hidden_states, return_dict)
-            if not return_dict:
-                logits = output[0]
-                loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, logits, labels, **kwargs)
-                output = (logits,) + output[1]
-                return (loss,) + output if loss is not None else output
-            logits = output["logits"]
             loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, logits, labels, **kwargs)
-            output = CausalLMOutputWithPast(
-                loss=loss,
-                logits=logits,
-                past_key_values=output["past_key_values"],
-                hidden_states=output["hidden_states"],
-                attentions=output["attentions"],
-            )
-        else:
-            output = eval_fn(input_ids, attention_mask, head_mask, 
-                past_key_values, inputs_embeds, labels, use_cache, 
-                output_attentions, output_hidden_states, return_dict)
+        elif labels is not None:
+            # Shift so that tokens < n predict n
+            # shift_logits = logits[..., :-1, :].contiguous()
+            shift_logits = self.task_compute_function(
+                fn=get_shift_logits,
+                inputs1={"logits": logits},
+                inputs2=None)
+            # shift_labels = labels[..., 1:].contiguous()
+            shift_labels = self.task_compute_function(
+                fn=get_shift_labels,
+                inputs1={"labels": labels},
+                inputs2=None)
+            # Flatten the tokens
+            loss_fct = CrossEntropyLoss()
+            # loss = loss_fct(shift_logits.view(-1, self.model.config.vocab_size), shift_labels.view(-1))
+            loss = self.task_compute_function(
+                fn=loss_fct,
+                inputs1={"input": shift_logits.view(-1, self.model.config.vocab_size), "target": shift_labels.view(-1)},
+                inputs2=None)
         
         if self.model.zo_eval_loss_fn_post_hooks != []:
             for post_hook_fn in self.model.zo_eval_loss_fn_post_hooks:
-                output, input_ids, logits, labels = post_hook_fn(self.model, output, input_ids, logits, labels)
-        self.assign_zo2_attributes(self.model.model.decoder.opt, self)
-        return output
+                output, input_ids, logits, labels = \
+                    self.task_compute_function(post_hook_fn,
+                        inputs1={"self": self.model, "loss": loss, "input_ids": input_ids, "logits": logits, "labels": labels},
+                        inputs2=None)
+        
+        if not return_dict:
+            output = (logits,) + outputs[1]
+            return (loss,) + output if loss is not None else output
+        
+        return CausalLMOutputWithPast(
+            loss=loss,
+            logits=logits,
+            past_key_values=outputs.past_key_values,
+            hidden_states=outputs.hidden_states,
+            attentions=outputs.attentions,
+        )
 
 
 class OptimizerOPTForSequenceClassification(MeZO2SGD):

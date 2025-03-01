@@ -161,7 +161,27 @@ class MeZO2SGD(MeZOSGD):
                 self.compute_stream.synchronize()
             self.upload_stream.synchronize()   # module compute depends on upload task
             with torch.cuda.stream(self.compute_stream):
-                o1, o2 = self.compute_module_impl(
+                if inputs2 is not None:
+                    return self.compute_module_impl(
+                        self.module_dual_forward,
+                        module,
+                        self.compute_module_optimize_method,
+                        inputs1=inputs1, 
+                        inputs2=inputs2,
+                        projected_grad=grad,
+                        weight_decay=weight_decay,
+                        *args, **kwargs
+                    )
+                else:
+                    return self.compute_module_impl(
+                        None,
+                        module,
+                        self.compute_module_optimize_method,
+                        **inputs1
+                    )
+        else:
+            if inputs2 is not None:
+                return self.compute_module_impl(
                     self.module_dual_forward,
                     module,
                     self.compute_module_optimize_method,
@@ -171,25 +191,38 @@ class MeZO2SGD(MeZOSGD):
                     weight_decay=weight_decay,
                     *args, **kwargs
                 )
-        else:
-            o1, o2 = self.compute_module_impl(
-                self.module_dual_forward,
-                module,
-                self.compute_module_optimize_method,
-                inputs1=inputs1, 
-                inputs2=inputs2,
-                projected_grad=grad,
-                weight_decay=weight_decay,
-                *args, **kwargs
-            )
-        return o1, o2
+            else:
+                return self.compute_module_impl(
+                    None,
+                    module,
+                    self.compute_module_optimize_method,
+                    **inputs1
+                )
     
     def task_compute_function(self, fn, inputs1, inputs2, compute_sync=True, *args, **kwargs):
         if self.overlap:
             if compute_sync:
                 self.compute_stream.synchronize()
             with torch.cuda.stream(self.compute_stream):
-                o1, o2 = self.compute_function_impl(
+                if inputs2 is not None:
+                    return self.compute_function_impl(
+                        self.function_dual_forward,
+                        fn,
+                        self.compute_function_optimize_method,
+                        inputs1=inputs1, 
+                        inputs2=inputs2,
+                        *args, **kwargs
+                    )
+                else:
+                    return self.compute_function_impl(
+                        None,
+                        fn, 
+                        self.compute_function_optimize_method,
+                        **inputs1
+                    )
+        else:
+            if inputs2 is not None:
+                return self.compute_function_impl(
                     self.function_dual_forward,
                     fn,
                     self.compute_function_optimize_method,
@@ -197,16 +230,13 @@ class MeZO2SGD(MeZOSGD):
                     inputs2=inputs2,
                     *args, **kwargs
                 )
-        else:
-            o1, o2 = self.compute_function_impl(
-                self.function_dual_forward,
-                fn,
-                self.compute_function_optimize_method,
-                inputs1=inputs1, 
-                inputs2=inputs2,
-                *args, **kwargs
-            )
-        return o1, o2
+            else:
+                return self.compute_function_impl(
+                    None,
+                    fn, 
+                    self.compute_function_optimize_method,
+                    **inputs1
+                )
     
     #*********************** evaluate ***********************#
 
@@ -327,7 +357,7 @@ class MeZO2SGD(MeZOSGD):
         
     def compute_module_impl(
             self,
-            module_dual_forward,
+            forward_fn,
             module: torch.nn.Module,
             optimize_method: str,
             *args, 
@@ -341,11 +371,14 @@ class MeZO2SGD(MeZOSGD):
                 module = torch.compile(module, **optimize_kwargs)
             case _:
                 raise NotImplementedError
-        return module_dual_forward(module=module, *args, **kwargs)
+        if forward_fn is None:
+            return module(*args, **kwargs)
+        else:
+            return forward_fn(module=module, *args, **kwargs)
 
     def compute_function_impl(
             self,
-            function_dual_forward,
+            function_fn,
             fn,
             optimize_method: str,
             *args, 
@@ -359,7 +392,10 @@ class MeZO2SGD(MeZOSGD):
                 fn = torch.jit.script(fn, **optimize_kwargs)
             case _:
                 raise NotImplementedError
-        return function_dual_forward(fn, *args, **kwargs)
+        if function_fn is None:
+            return fn(*args, **kwargs)
+        else:
+            return function_fn(fn, *args, **kwargs)
 
     #*********************** api ***********************#
 
