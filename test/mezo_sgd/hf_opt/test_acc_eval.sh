@@ -3,10 +3,8 @@
 set -e
 set -o pipefail
 
-# model_names=("opt_125m" "opt_350m" "opt_1_3b" "opt_2_7b" "opt_6_7b" "opt_13b" "opt_30b" "opt_66b" "opt_175b")
-model_names=("opt_350m")
-# task_ids=("causalLM" "sequence_classification" "question_answering")
-task_ids=("causalLM")
+model_names=("opt_125m" "opt_350m" "opt_1_3b" "opt_2_7b" "opt_6_7b" "opt_13b" "opt_30b" "opt_66b" "opt_175b")
+task_ids=("causalLM" "sequence_classification" "question_answering")
 
 # ANSI color codes
 GREEN='\033[0;32m'

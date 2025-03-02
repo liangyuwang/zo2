@@ -1086,17 +1086,17 @@ class OptimizerOPTModel(MeZO2SGD):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
-        output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
+        output_attentions = output_attentions if output_attentions is not None else self.model.config.output_attentions
         output_hidden_states = (
-            output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
+            output_hidden_states if output_hidden_states is not None else self.model.config.output_hidden_states
         )
-        use_cache = use_cache if use_cache is not None else self.config.use_cache
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        use_cache = use_cache if use_cache is not None else self.model.config.use_cache
+        return_dict = return_dict if return_dict is not None else self.model.config.use_return_dict
 
         self.model.decoder.zo_training = False
         self.assign_zo2_attributes(self, self.model.decoder.opt)
         # decoder outputs consists of (dec_features, past_key_value, dec_hidden, dec_attn)
-        decoder_outputs = self.decoder(
+        decoder_outputs = self.model.decoder(
             input_ids=input_ids,
             attention_mask=attention_mask,
             head_mask=head_mask,
@@ -1240,7 +1240,6 @@ class OptimizerOPTForCausalLM(MeZO2SGD):
         return_dict: Optional[bool] = None,
         **kwargs
     ) -> Union[Tuple, CausalLMOutputWithPast]:
-
         output_attentions = output_attentions if output_attentions is not None else self.model.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.model.config.output_hidden_states
@@ -1278,12 +1277,17 @@ class OptimizerOPTForCausalLM(MeZO2SGD):
             for pre_hook_fn in self.model.zo_eval_loss_fn_pre_hooks:
                 input_ids, logits, labels = \
                     self.task_compute_function(pre_hook_fn,
-                        inputs1={"self": self.model, "input_ids": input_ids, "logits": logits, "labels": labels},
+                        inputs1={"input_ids": input_ids, "logits": logits, "labels": labels},
                         inputs2=None)
         
         loss = None
         if self.model.zo_custom_eval_loss_fn:
-            loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, logits, labels, **kwargs)
+            loss = self.task_compute_function(
+                fn=self.model.zo_custom_eval_loss_fn,
+                inputs1={"input_ids": input_ids, "logits": logits, "labels": labels, **kwargs},
+                inputs2=None,
+                compute_sync=False
+            )
         elif labels is not None:
             # Shift so that tokens < n predict n
             # shift_logits = logits[..., :-1, :].contiguous()
@@ -1308,7 +1312,7 @@ class OptimizerOPTForCausalLM(MeZO2SGD):
             for post_hook_fn in self.model.zo_eval_loss_fn_post_hooks:
                 output, input_ids, logits, labels = \
                     self.task_compute_function(post_hook_fn,
-                        inputs1={"self": self.model, "loss": loss, "input_ids": input_ids, "logits": logits, "labels": labels},
+                        inputs1={"loss": loss, "input_ids": input_ids, "logits": logits, "labels": labels},
                         inputs2=None)
         
         if not return_dict:
@@ -1469,7 +1473,6 @@ class OptimizerOPTForSequenceClassification(MeZO2SGD):
     @torch.inference_mode
     def inner_zo_eval_forward(
         self,
-        eval_fn, 
         input_ids: Optional[torch.LongTensor] = None,
         attention_mask: Optional[torch.FloatTensor] = None,
         head_mask: Optional[torch.FloatTensor] = None,
@@ -1482,40 +1485,84 @@ class OptimizerOPTForSequenceClassification(MeZO2SGD):
         return_dict: Optional[bool] = None,
         **kwargs
     ) -> Union[Tuple, SequenceClassifierOutputWithPast]:
+        output_attentions = output_attentions if output_attentions is not None else self.model.model.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.model.model.config.output_hidden_states
+        )
+        return_dict = return_dict if return_dict is not None else self.model.model.config.use_return_dict
+
         self.model.model.zo_training = False
-        self.assign_zo2_attributes(self, self.model.model.decoder.opt)
+        self.assign_zo2_attributes(self, self.model.model.opt)
+        transformer_outputs = self.model.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        self.assign_zo2_attributes(self.model.model.opt, self)
+
+        hidden_states = self.task_compute_function(
+            fn=fn_get_opt_decoder_hidden_states_from_layer_outputs,
+            inputs1={"input": transformer_outputs},
+            inputs2=None)
+
+        logits = self.task_compute_module(self.model.score,
+                                        inputs1={"input": hidden_states},
+                                        inputs2=None,
+                                        grad=self.projected_grad)
+
+        pooled_logits = self.task_compute_function(
+            fn=get_opt_sequence_classification_pooled_logits,
+            inputs1={"config": self.model.config, "logits": logits, "input_ids": input_ids, "inputs_embeds": inputs_embeds},
+            inputs2=None,
+            compute_sync=False)
+
         if self.model.zo_eval_loss_fn_pre_hooks != []:
             for pre_hook_fn in self.model.zo_eval_loss_fn_pre_hooks:
-                input_ids, logits, labels = pre_hook_fn(self.model, input_ids, logits, labels)
+                input_ids, logits, labels = self.task_compute_function(pre_hook_fn,
+                    inputs1={"input_ids": input_ids, "logits": logits, "labels": labels},
+                    inputs2=None,
+                    compute_sync=False)
 
+        loss = None
         if self.model.zo_custom_eval_loss_fn:
-            output = eval_fn(input_ids, attention_mask, head_mask, 
-                past_key_values, inputs_embeds, None, use_cache, 
-                output_attentions, output_hidden_states, return_dict)
-            if not return_dict:
-                logits = output[0]
-                loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, logits, labels, **kwargs)
-                output = (logits,) + output[1]
-                return (loss,) + output if loss is not None else output
-            logits = output["logits"]
-            loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, logits, labels, **kwargs)
-            output = SequenceClassifierOutputWithPast(
-                loss=loss,
-                logits=logits,
-                past_key_values=output["past_key_values"],
-                hidden_states=output["hidden_states"],
-                attentions=output["attentions"],
+            loss = self.task_compute_function(
+                fn=self.model.zo_custom_eval_loss_fn,
+                inputs1={"config": self.model.config, "input_ids": input_ids, "pooled_logits": pooled_logits, "labels": labels, "num_labels": self.model.num_labels, **kwargs},
+                inputs2=None,
+                compute_sync=False
             )
-        else:
-            output = eval_fn(input_ids, attention_mask, head_mask, 
-                past_key_values, inputs_embeds, labels, use_cache, 
-                output_attentions, output_hidden_states, return_dict)
+        elif labels is not None:
+            loss = self.task_compute_function(
+                fn=get_opt_sequence_classification_loss,
+                inputs1={"config": self.model.config, "loss": loss, "pooled_logits": pooled_logits, "labels": labels, "num_labels": self.model.num_labels},
+                inputs2=None,
+                compute_sync=False
+            )
         
         if self.model.zo_eval_loss_fn_post_hooks != []:
             for post_hook_fn in self.model.zo_eval_loss_fn_post_hooks:
-                output, input_ids, logits, labels = post_hook_fn(self.model, output, input_ids, logits, labels)
-        self.assign_zo2_attributes(self.model.model.decoder.opt, self)
-        return output
+                transformer_outputs, input_ids, logits, labels = self.task_compute_function(post_hook_fn,
+                    inputs1={"transformer_outputs": transformer_outputs, "input_ids": input_ids, "pooled_logits": pooled_logits, "labels": labels},
+                    inputs2=None,
+                    compute_sync=False)
+
+        if not return_dict:
+            transformer_outputs = (logits,) + transformer_outputs[1:]
+            return ((loss,) + transformer_outputs) if loss is not None else transformer_outputs
+        
+        return SequenceClassifierOutputWithPast(
+            loss=loss,
+            logits=pooled_logits,
+            past_key_values=transformer_outputs.past_key_values,
+            hidden_states=transformer_outputs.hidden_states,
+            attentions=transformer_outputs.attentions,
+        )
 
 
 class OptimizerOPTForQuestionAnswering(MeZO2SGD):
@@ -1631,7 +1678,6 @@ class OptimizerOPTForQuestionAnswering(MeZO2SGD):
     @torch.inference_mode
     def inner_zo_eval_forward(
         self,
-        eval_fn, 
         input_ids: Optional[torch.LongTensor] = None,
         attention_mask: Optional[torch.FloatTensor] = None,
         head_mask: Optional[torch.FloatTensor] = None,
@@ -1645,38 +1691,74 @@ class OptimizerOPTForQuestionAnswering(MeZO2SGD):
         return_dict: Optional[bool] = None,
         **kwargs
     ) -> Union[Tuple, QuestionAnsweringModelOutput]:
+        return_dict = return_dict if return_dict is not None else self.model.config.use_return_dict
+
         self.model.model.zo_training = False
-        self.assign_zo2_attributes(self, self.model.model.decoder.opt)
+        self.assign_zo2_attributes(self, self.model.model.opt)
+        transformer_outputs = self.model.model(
+            input_ids,
+            past_key_values=past_key_values,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        self.assign_zo2_attributes(self.model.model.opt, self)
+        
+        hidden_states = self.task_compute_function(
+            fn=fn_get_opt_decoder_hidden_states_from_layer_outputs,
+            inputs1={"input": transformer_outputs},
+            inputs2=None)
+
+        logits = self.task_compute_module(self.model.qa_outputs,
+                                        inputs1={"input": hidden_states},
+                                        inputs2=None,
+                                        grad=self.projected_grad)
+
+        start_logits, end_logits = self.task_compute_function(
+            fn=get_start_logits_and_end_logits,
+            inputs1={"logits": logits},
+            inputs2=None,
+            compute_sync=False)
+
         if self.model.zo_eval_loss_fn_pre_hooks != []:
             for pre_hook_fn in self.model.zo_eval_loss_fn_pre_hooks:
-                input_ids, start_logits, start_positions, end_logits, end_positions = pre_hook_fn(self.model, input_ids, start_logits, start_positions, end_logits, end_positions)
+                input_ids, start_logits, start_positions, end_logits, end_positions = self.task_compute_function(pre_hook_fn,
+                    inputs1={"input_ids": input_ids, "start_logits": start_logits, "start_positions": start_positions, "end_logits": end_logits, "end_positions": end_positions},
+                    inputs2=None,
+                    compute_sync=False)
 
+        total_loss = None
         if self.model.zo_custom_eval_loss_fn:
-            output = eval_fn(input_ids, attention_mask, head_mask, 
-                past_key_values, inputs_embeds, None, None, use_cache, 
-                output_attentions, output_hidden_states, return_dict)
-            if not return_dict:
-                start_logits, end_logits = output[0], output[1]
-                loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, start_logits, start_positions, end_logits, end_positions, **kwargs)
-                output = (start_logits, end_logits) + output[2:]
-                return (loss,) + output if loss is not None else output
-            start_logits = output["start_logits"]
-            end_logits = output["end_logits"]
-            loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, start_logits, start_positions, end_logits, end_positions, **kwargs)
-            output = QuestionAnsweringModelOutput(
-                loss=loss,
-                start_logits=start_logits,
-                end_logits=end_logits,
-                hidden_states=output["hidden_states"],
-                attentions=output["attentions"],
-            )
-        else:
-            output = eval_fn(input_ids, attention_mask, head_mask, 
-                past_key_values, inputs_embeds, start_positions, end_positions, use_cache, 
-                output_attentions, output_hidden_states, return_dict)
+            total_loss = self.task_compute_function(self.model.zo_custom_eval_loss_fn,
+                inputs1={"input_ids": input_ids, "start_logits": start_logits, "start_positions": start_positions, "end_logits": end_logits, "end_positions": end_positions, **kwargs},
+                inputs2=None,
+                compute_sync=False)
+        elif start_positions is not None and end_positions is not None:
+            total_loss = self.task_compute_function(
+                fn=get_opt_question_answering_loss,
+                inputs1={"total_loss": total_loss, "start_logits": start_logits, "start_positions": start_positions, "end_logits": end_logits, "end_positions": end_positions},
+                inputs2=None,
+                compute_sync=False)
         
         if self.model.zo_eval_loss_fn_post_hooks != []:
             for post_hook_fn in self.model.zo_eval_loss_fn_post_hooks:
-                output, input_ids, start_logits, start_positions, end_logits, end_positions = post_hook_fn(self.model, output, input_ids, start_logits, start_positions, end_logits, end_positions)
-        self.assign_zo2_attributes(self.model.model.decoder.opt, self)
-        return output
+                transformer_outputs, input_ids, start_logits, start_positions, end_logits, end_positions = self.task_compute_function(post_hook_fn,
+                    inputs1={"transformer_outputs": transformer_outputs, "input_ids": input_ids, "start_logits": start_logits, "start_positions": start_positions, "end_logits": end_logits, "end_positions": end_positions},
+                    inputs2=None,
+                    compute_sync=False)
+
+        if not return_dict:
+            output = (start_logits, end_logits) + transformer_outputs[2:]
+            return ((total_loss,) + output) if total_loss is not None else output
+
+        return QuestionAnsweringModelOutput(
+            loss=total_loss,
+            start_logits=start_logits,
+            end_logits=end_logits,
+            hidden_states=transformer_outputs.hidden_states,
+            attentions=transformer_outputs.attentions,
+        )
