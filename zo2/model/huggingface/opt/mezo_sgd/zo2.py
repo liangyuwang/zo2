@@ -1277,14 +1277,14 @@ class OptimizerOPTForCausalLM(MeZO2SGD):
             for pre_hook_fn in self.model.zo_eval_loss_fn_pre_hooks:
                 input_ids, logits, labels = \
                     self.task_compute_function(pre_hook_fn,
-                        inputs1={"input_ids": input_ids, "logits": logits, "labels": labels},
+                        inputs1=([self.model], {"input_ids": input_ids, "logits": logits, "labels": labels}),
                         inputs2=None)
         
         loss = None
         if self.model.zo_custom_eval_loss_fn:
             loss = self.task_compute_function(
                 fn=self.model.zo_custom_eval_loss_fn,
-                inputs1={"input_ids": input_ids, "logits": logits, "labels": labels, **kwargs},
+                inputs1=([self.model], {"input_ids": input_ids, "logits": logits, "labels": labels, **kwargs}),
                 inputs2=None,
                 compute_sync=False
             )
@@ -1312,7 +1312,7 @@ class OptimizerOPTForCausalLM(MeZO2SGD):
             for post_hook_fn in self.model.zo_eval_loss_fn_post_hooks:
                 output, input_ids, logits, labels = \
                     self.task_compute_function(post_hook_fn,
-                        inputs1={"loss": loss, "input_ids": input_ids, "logits": logits, "labels": labels},
+                        inputs1=([self.model], {"loss": loss, "input_ids": input_ids, "logits": logits, "labels": labels}),
                         inputs2=None)
         
         if not return_dict:
@@ -1518,14 +1518,14 @@ class OptimizerOPTForSequenceClassification(MeZO2SGD):
 
         pooled_logits = self.task_compute_function(
             fn=get_opt_sequence_classification_pooled_logits,
-            inputs1={"config": self.model.config, "logits": logits, "input_ids": input_ids, "inputs_embeds": inputs_embeds},
+            inputs1=([self.model], {"logits": logits, "input_ids": input_ids, "inputs_embeds": inputs_embeds}),
             inputs2=None,
             compute_sync=False)
 
         if self.model.zo_eval_loss_fn_pre_hooks != []:
             for pre_hook_fn in self.model.zo_eval_loss_fn_pre_hooks:
                 input_ids, logits, labels = self.task_compute_function(pre_hook_fn,
-                    inputs1={"input_ids": input_ids, "logits": logits, "labels": labels},
+                    inputs1=([self.model], {"input_ids": input_ids, "logits": logits, "labels": labels}),
                     inputs2=None,
                     compute_sync=False)
 
@@ -1533,14 +1533,14 @@ class OptimizerOPTForSequenceClassification(MeZO2SGD):
         if self.model.zo_custom_eval_loss_fn:
             loss = self.task_compute_function(
                 fn=self.model.zo_custom_eval_loss_fn,
-                inputs1={"config": self.model.config, "input_ids": input_ids, "pooled_logits": pooled_logits, "labels": labels, "num_labels": self.model.num_labels, **kwargs},
+                inputs1=([self.model], {"input_ids": input_ids, "pooled_logits": pooled_logits, "labels": labels, **kwargs}),
                 inputs2=None,
                 compute_sync=False
             )
         elif labels is not None:
             loss = self.task_compute_function(
                 fn=get_opt_sequence_classification_loss,
-                inputs1={"config": self.model.config, "loss": loss, "pooled_logits": pooled_logits, "labels": labels, "num_labels": self.model.num_labels},
+                inputs1=([self.model], {"loss": loss, "pooled_logits": pooled_logits, "labels": labels}),
                 inputs2=None,
                 compute_sync=False
             )
@@ -1548,7 +1548,7 @@ class OptimizerOPTForSequenceClassification(MeZO2SGD):
         if self.model.zo_eval_loss_fn_post_hooks != []:
             for post_hook_fn in self.model.zo_eval_loss_fn_post_hooks:
                 transformer_outputs, input_ids, logits, labels = self.task_compute_function(post_hook_fn,
-                    inputs1={"transformer_outputs": transformer_outputs, "input_ids": input_ids, "pooled_logits": pooled_logits, "labels": labels},
+                    inputs1=([self.model], {"transformer_outputs": transformer_outputs, "input_ids": input_ids, "pooled_logits": pooled_logits, "labels": labels}),
                     inputs2=None,
                     compute_sync=False)
 
@@ -1727,14 +1727,14 @@ class OptimizerOPTForQuestionAnswering(MeZO2SGD):
         if self.model.zo_eval_loss_fn_pre_hooks != []:
             for pre_hook_fn in self.model.zo_eval_loss_fn_pre_hooks:
                 input_ids, start_logits, start_positions, end_logits, end_positions = self.task_compute_function(pre_hook_fn,
-                    inputs1={"input_ids": input_ids, "start_logits": start_logits, "start_positions": start_positions, "end_logits": end_logits, "end_positions": end_positions},
+                    inputs1=([self.model], {"input_ids": input_ids, "start_logits": start_logits, "start_positions": start_positions, "end_logits": end_logits, "end_positions": end_positions}),
                     inputs2=None,
                     compute_sync=False)
 
         total_loss = None
         if self.model.zo_custom_eval_loss_fn:
             total_loss = self.task_compute_function(self.model.zo_custom_eval_loss_fn,
-                inputs1={"input_ids": input_ids, "start_logits": start_logits, "start_positions": start_positions, "end_logits": end_logits, "end_positions": end_positions, **kwargs},
+                inputs1=([self.model], {"input_ids": input_ids, "start_logits": start_logits, "start_positions": start_positions, "end_logits": end_logits, "end_positions": end_positions, **kwargs}),
                 inputs2=None,
                 compute_sync=False)
         elif start_positions is not None and end_positions is not None:
@@ -1747,7 +1747,7 @@ class OptimizerOPTForQuestionAnswering(MeZO2SGD):
         if self.model.zo_eval_loss_fn_post_hooks != []:
             for post_hook_fn in self.model.zo_eval_loss_fn_post_hooks:
                 transformer_outputs, input_ids, start_logits, start_positions, end_logits, end_positions = self.task_compute_function(post_hook_fn,
-                    inputs1={"transformer_outputs": transformer_outputs, "input_ids": input_ids, "start_logits": start_logits, "start_positions": start_positions, "end_logits": end_logits, "end_positions": end_positions},
+                    inputs1=([self.model], {"transformer_outputs": transformer_outputs, "input_ids": input_ids, "start_logits": start_logits, "start_positions": start_positions, "end_logits": end_logits, "end_positions": end_positions}),
                     inputs2=None,
                     compute_sync=False)
 

@@ -51,38 +51,38 @@ def update_all_hidden_states(output_hidden_states, all_hidden_states, hidden_sta
 def get_past_key_value(past_key_values, idx):
     return past_key_values[idx] if past_key_values is not None else None
 
-def get_opt_sequence_classification_pooled_logits(config, logits, input_ids, inputs_embeds):
+def get_opt_sequence_classification_pooled_logits(self, logits, input_ids, inputs_embeds):
     if input_ids is not None:
         batch_size, sequence_length = input_ids.shape[:2]
     else:
         batch_size, sequence_length = inputs_embeds.shape[:2]
-    if config.pad_token_id is None:
+    if self.config.pad_token_id is None:
         sequence_lengths = -1
     else:
         if input_ids is not None:
-            sequence_lengths = (torch.ne(input_ids, config.pad_token_id).sum(-1) - 1).to(logits.device)
+            sequence_lengths = (torch.ne(input_ids, self.config.pad_token_id).sum(-1) - 1).to(logits.device)
         else:
             sequence_lengths = -1
     return logits[torch.arange(batch_size, device=logits.device), sequence_lengths]
 
-def get_opt_sequence_classification_loss(config, loss, pooled_logits, labels, num_labels):
-    if config.problem_type is None:
-        if num_labels == 1:
-            config.problem_type = "regression"
-        elif num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
-            config.problem_type = "single_label_classification"
+def get_opt_sequence_classification_loss(self, loss, pooled_logits, labels):
+    if self.config.problem_type is None:
+        if self.num_labels == 1:
+            self.config.problem_type = "regression"
+        elif self.num_labels > 1 and (labels.dtype == torch.long or labels.dtype == torch.int):
+            self.config.problem_type = "single_label_classification"
         else:
-            config.problem_type = "multi_label_classification"
-    if config.problem_type == "regression":
+            self.config.problem_type = "multi_label_classification"
+    if self.config.problem_type == "regression":
         loss_fct = torch.nn.MSELoss()
-        if num_labels == 1:
+        if self.num_labels == 1:
             loss = loss_fct(pooled_logits.squeeze(), labels.squeeze())
         else:
             loss = loss_fct(pooled_logits, labels)
-    elif config.problem_type == "single_label_classification":
+    elif self.config.problem_type == "single_label_classification":
         loss_fct = torch.nn.CrossEntropyLoss()
-        loss = loss_fct(pooled_logits.view(-1, num_labels), labels.view(-1))
-    elif config.problem_type == "multi_label_classification":
+        loss = loss_fct(pooled_logits.view(-1, self.num_labels), labels.view(-1))
+    elif self.config.problem_type == "multi_label_classification":
         loss_fct = torch.nn.BCEWithLogitsLoss()
         loss = loss_fct(pooled_logits, labels)
     return loss
