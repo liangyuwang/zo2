@@ -112,21 +112,13 @@ class MeZO2SGD(MeZOSGD):
         if self.overlap:
             if upload_sync:
                 self.upload_stream.synchronize()
-            with torch.cuda.stream(self.upload_stream):
-                module = self.upload_impl(
-                    module, 
-                    device, 
-                    self.offloading_device,
-                    self.communicate_optimize_method, 
-                    non_blocking=True, 
-                    *args, **kwargs
-                )
-        else:
+        with torch.cuda.stream(self.upload_stream if self.overlap else torch.cuda.current_stream()):
             module = self.upload_impl(
                 module, 
                 device, 
                 self.offloading_device,
                 self.communicate_optimize_method, 
+                non_blocking=self.overlap, 
                 *args, **kwargs
             )
         return module
@@ -136,21 +128,13 @@ class MeZO2SGD(MeZOSGD):
             if offload_sync:
                 self.offload_stream.synchronize()
             self.compute_stream.synchronize()   # offload depends on compute task
-            with torch.cuda.stream(self.offload_stream):
-                module = self.offload_impl(
-                    module, 
-                    device, 
-                    self.offloading_device,
-                    self.communicate_optimize_method, 
-                    non_blocking=True, 
-                    *args, **kwargs
-                )
-        else:
+        with torch.cuda.stream(self.offload_stream if self.overlap else torch.cuda.current_stream()):
             module = self.offload_impl(
                 module, 
                 device, 
                 self.offloading_device,
                 self.communicate_optimize_method, 
+                non_blocking=self.overlap, 
                 *args, **kwargs
             )
         return module
@@ -160,26 +144,7 @@ class MeZO2SGD(MeZOSGD):
             if compute_sync:
                 self.compute_stream.synchronize()
             self.upload_stream.synchronize()   # module compute depends on upload task
-            with torch.cuda.stream(self.compute_stream):
-                if inputs2 is not None:
-                    return self.compute_module_impl(
-                        self.module_dual_forward,
-                        module,
-                        self.compute_module_optimize_method,
-                        inputs1=inputs1, 
-                        inputs2=inputs2,
-                        projected_grad=grad,
-                        weight_decay=weight_decay,
-                        *args, **kwargs
-                    )
-                else:
-                    return self.compute_module_impl(
-                        None,
-                        module,
-                        self.compute_module_optimize_method,
-                        **inputs1
-                    )
-        else:
+        with torch.cuda.stream(self.compute_stream if self.overlap else torch.cuda.current_stream()):
             if inputs2 is not None:
                 return self.compute_module_impl(
                     self.module_dual_forward,
@@ -191,36 +156,42 @@ class MeZO2SGD(MeZOSGD):
                     weight_decay=weight_decay,
                     *args, **kwargs
                 )
-            else:
+            elif isinstance(inputs1, list):
                 return self.compute_module_impl(
                     None,
                     module,
                     self.compute_module_optimize_method,
-                    **inputs1
+                    *inputs1,
+                    *args,
+                    **kwargs
                 )
+            elif isinstance(inputs1, dict):
+                return self.compute_module_impl(
+                    None,
+                    module,
+                    self.compute_module_optimize_method,
+                    *args,
+                    **inputs1,
+                    **kwargs
+                )
+            elif isinstance(inputs1, tuple):
+                return self.compute_module_impl(
+                    None,
+                    module,
+                    self.compute_module_optimize_method,
+                    *inputs1[0],
+                    *args,
+                    **inputs1[1],
+                    **kwargs
+                )
+            else:
+                raise ValueError("Invalid inputs type.")
     
     def task_compute_function(self, fn, inputs1, inputs2, compute_sync=True, *args, **kwargs):
         if self.overlap:
             if compute_sync:
                 self.compute_stream.synchronize()
-            with torch.cuda.stream(self.compute_stream):
-                if inputs2 is not None:
-                    return self.compute_function_impl(
-                        self.function_dual_forward,
-                        fn,
-                        self.compute_function_optimize_method,
-                        inputs1=inputs1, 
-                        inputs2=inputs2,
-                        *args, **kwargs
-                    )
-                else:
-                    return self.compute_function_impl(
-                        None,
-                        fn, 
-                        self.compute_function_optimize_method,
-                        **inputs1
-                    )
-        else:
+        with torch.cuda.stream(self.compute_stream if self.overlap else torch.cuda.current_stream()):
             if inputs2 is not None:
                 return self.compute_function_impl(
                     self.function_dual_forward,
@@ -230,13 +201,36 @@ class MeZO2SGD(MeZOSGD):
                     inputs2=inputs2,
                     *args, **kwargs
                 )
-            else:
+            elif isinstance(inputs1, list):
                 return self.compute_function_impl(
                     None,
                     fn, 
                     self.compute_function_optimize_method,
-                    **inputs1
+                    *inputs1,
+                    *args,
+                    **kwargs
                 )
+            elif isinstance(inputs1, dict):
+                return self.compute_function_impl(
+                    None,
+                    fn, 
+                    self.compute_function_optimize_method,
+                    *args,
+                    **inputs1,
+                    **kwargs
+                )
+            elif isinstance(inputs1, tuple):
+                return self.compute_function_impl(
+                    None,
+                    fn, 
+                    self.compute_function_optimize_method,
+                    *inputs1[0],
+                    *args,
+                    **inputs1[1],
+                    **kwargs
+                )
+            else:
+                raise ValueError("Invalid inputs type.")
     
     #*********************** evaluate ***********************#
 
