@@ -916,8 +916,12 @@ class OptimizerOPTDecoder(MeZO2SGD):
                 fn=update_all_self_attns,
                 inputs1={"output_attentions": output_attentions, "all_self_attns": all_self_attns, "layer_outputs": layer_outputs},
                 inputs2=None,
-                compute_sync=True)  # need to be optimized
+                compute_sync=False)
             
+            # an unknown bug here, need to synchronize the stream to avoid memory leak (only apears in opt-350m)
+            if i in range(1, N-1, 2) and i in self.offloading_blocks:
+                self.compute_stream.synchronize()   # a weird but useful trick to avoid memory leak
+
             if i in self.offloading_blocks:
                 self.model.layers[i] = self.task_upload(
                     module=self.model.layers[i],
