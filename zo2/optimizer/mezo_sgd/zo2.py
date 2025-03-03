@@ -61,6 +61,11 @@ class MeZO2SGD(MeZOSGD):
         if self.amp: self.init_zo2_amp()
     
     def init_zo2_amp(self):
+        """
+        Initializes the model parameters to use different precision levels based on their current device.
+        This method works with Automatic Mixed Precision (AMP) by setting the precision for parameters 
+        based on whether they are located on the working device or the offloading device.
+        """
         working_device = torch.device(self.device)
         offloading_device = torch.device(self.offloading_device)
         for p in self.model.parameters():
@@ -232,7 +237,7 @@ class MeZO2SGD(MeZOSGD):
         Args:
             module (nn.Module): The module on which computations are to be performed.
             inputs1 (dict): Inputs for the first computation.
-            inputs2 (dict, optional): Inputs for the second computation, if performing dual forward.
+            inputs2 (dict, could be None): Inputs for the second computation, if performing dual forward.
             grad (float): Gradient value to be applied.
             compute_sync (bool): Whether to synchronize the compute stream before proceeding.
             weight_decay (float, optional): Optional weight decay during the update.
@@ -292,7 +297,7 @@ class MeZO2SGD(MeZOSGD):
         Args:
             fn (callable): The function to execute, typically a PyTorch operation or custom function.
             inputs1 (dict): Arguments for the first execution of the function.
-            inputs2 (dict): Arguments for the second execution of the function.
+            inputs2 (dict, could be None): Arguments for the second execution of the function.
             compute_sync (bool): Whether to synchronize the compute stream before execution to ensure data readiness.
         """
         if self.overlap:
@@ -562,6 +567,17 @@ class MeZO2SGD(MeZOSGD):
                 return function_fn(fn, *args, **kwargs)
 
     def amp_decompress_impl(self, module: nn.Module) -> nn.Module:
+        """
+        Converts the data type of module parameters to a higher precision typically used for computations.
+        This is part of the AMP process where parameters might be temporarily compressed to a lower precision
+        and need to be decompressed back to higher precision for accuracy-critical operations.
+
+        Args:
+            module (nn.Module): The module whose parameters will be decompressed.
+
+        Returns:
+            nn.Module: The module with parameters converted to higher precision.
+        """
         for p in module.parameters():
             match self.amp_compress_method:
                 case "naive":
@@ -571,6 +587,16 @@ class MeZO2SGD(MeZOSGD):
         return module
 
     def amp_compress_impl(self, module: nn.Module) -> nn.Module:
+        """
+        Compresses the data type of module parameters to a lower precision typically used to save memory and 
+        improve computational efficiency during less accuracy-critical operations.
+        
+        Args:
+            module (nn.Module): The module whose parameters will be compressed.
+
+        Returns:
+            nn.Module: The module with parameters converted to lower precision.
+        """
         for p in module.parameters():
             match self.amp_compress_method:
                 case "naive":
@@ -582,6 +608,13 @@ class MeZO2SGD(MeZOSGD):
     #*********************** api ***********************#
 
     def init_zo2_upload(self):
+        """
+        Initializes the upload of essential model components to the GPU.
+        This method specifically handles the uploading of model embeddings and head components,
+        and prepares the offloading blocks based on configuration. This setup is crucial for
+        managing the active memory footprint during training by selectively uploading and
+        offloading transformer blocks as needed.
+        """
         print("Upload head and tail to cuda.")
         self.model.transformer.wte = self.model.transformer.wte.to(self.device)
         self.model.transformer.wpe = self.model.transformer.wpe.to(self.device)
@@ -604,9 +637,18 @@ class MeZO2SGD(MeZOSGD):
     @torch.inference_mode()   
     def inner_zo_forward(self, idx, pos, targets):
         """
-        Example of ZO2 inner_zo_forward:
-            Match the same args as the original model forward,
-            and replace all 'self' to 'self.model'.
+        Defines the inner forward logic for zeroth-order optimization, applying perturbations
+        and calculating the loss for gradient estimation. This method, using nanogpt as an example, orchestrates the forward
+        computation across potentially offloaded transformer blocks, ensuring they are uploaded
+        for computation and offloaded post-computation as configured.
+
+        Args:
+            idx (Tensor): Input indices for token embeddings.
+            pos (Tensor): Position indices for positional embeddings.
+            targets (Tensor): Target outputs for loss calculation.
+
+        Returns:
+            Tuple[Tensor, Tensor]: The losses computed from two perturbed forward passes, used for gradient estimation.
         """
         we1, we2 = self.task_compute_module(self.model.transformer.wte,
                                 inputs1={"input": idx},
@@ -669,6 +711,22 @@ class MeZO2SGD(MeZOSGD):
     
     @torch.inference_mode()   
     def inner_zo_eval_forward(self, eval_fn, idx, pos, targets):
+        """
+        Conducts an evaluation forward pass of the model using the zeroth-order optimization setup,
+        but without applying any perturbations to ensure accurate performance assessment.
+        This function manages the dynamic uploading and offloading of transformer blocks as needed,
+        utilizing pre- and post-hooks to optimize memory usage during evaluation.
+
+        Args:
+            eval_fn (callable): The evaluation function to be applied, typically involves a forward pass
+                                that computes the loss or other metrics without updating model parameters.
+            idx (Tensor): Input indices for token embeddings.
+            pos (Tensor): Position indices for positional embeddings.
+            targets (Tensor): Target outputs for computing the evaluation metric (e.g., loss).
+
+        Returns:
+            Tensor: The output from the evaluation function, typically loss or accuracy metrics.
+        """
         handles = self.add_zo2_eval_comm_hooks(self.model.transformer.h)
         output = eval_fn(idx, pos, targets)
         self.clear_zo2_eval_comm_hooks(handles)
