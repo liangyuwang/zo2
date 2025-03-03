@@ -12,9 +12,17 @@ from ...config.mezo_sgd import MeZOSGDConfig
 
 class MeZOSGD(BaseOptimizer):
     """
-        MeZO-SGD
+    Implements the [MeZO-SGD](https://arxiv.org/abs/2305.17333) optimization method, 
+    particularly suited for scenarios with limited compute resources.
     """
     def __init__(self, model: nn.Module, config: MeZOSGDConfig):
+        """
+        Initializes the MeZOSGD optimizer which applies zeroth-order optimization techniques to the model parameters.
+
+        Args:
+            model (nn.Module): The model whose parameters will be optimized.
+            config (MeZOSGDConfig): Configuration object containing optimizer settings.
+        """
         self.model = model
         self.lr = config.lr
         self.weight_decay = config.weight_decay
@@ -32,7 +40,14 @@ class MeZOSGD(BaseOptimizer):
         super().__init__(model.parameters(), defaults)
         
     @torch.inference_mode
-    def zo_perturb_parameters(self, module: nn.Module, scaling_factor: float=1):       
+    def zo_perturb_parameters(self, module: nn.Module, scaling_factor: float=1):
+        """
+        Applies Gaussian noise to parameters of a module, facilitating zeroth-order optimization.
+
+        Args:
+            module (nn.Module): Module whose parameters will be perturbed.
+            scaling_factor (float): Scaling factor for the noise applied to the parameters.
+        """
         for _, param in module.named_parameters():
             if param.requires_grad:
                 # Resample z
@@ -44,6 +59,13 @@ class MeZOSGD(BaseOptimizer):
 
     @torch.inference_mode
     def zo_update(self, module, weight_decay=None):
+        """
+        Updates the parameters of a module based on zeroth-order perturbations and optional weight decay.
+
+        Args:
+            module (nn.Module): Module whose parameters will be updated.
+            weight_decay (float, optional): Weight decay coefficient. If None, it defaults to the configuration.
+        """
         for name, param in module.named_parameters():
             if param.requires_grad:
                 # Resample z
@@ -62,10 +84,23 @@ class MeZOSGD(BaseOptimizer):
                         param.data.sub_(self.lr * self.projected_grad * z)
     
     def zo_perturb_shifts(self, first_perturb_shift=1, stride=2):
+        """
+        Generates shifts for perturbing parameters in a pattern conducive to zeroth-order optimization.
+
+        Returns:
+            list: A list of perturb shifts used during the forward and update passes.
+        """
         return [first_perturb_shift, -stride, stride-first_perturb_shift]
 
     @torch.inference_mode
     def zo_forward(self, *args, zo_random_seed: int=None, **kwargs):
+        """
+        Forward pass that applies zeroth-order perturbations to compute the loss, used for gradient estimation.
+        Notice that the application of Gaussian perturbations for the parameters during both the perturbation and update phases should be the same.
+
+        Args:
+            zo_random_seed (int, optional): Random seed for reproducibility of perturbations.
+        """
         self._update_lr()
         self.zo_random_seed = zo_random_seed if zo_random_seed else np.random.randint(self.max_zo_random_seed)
         torch.manual_seed(self.zo_random_seed)
@@ -85,6 +120,9 @@ class MeZOSGD(BaseOptimizer):
 
     @torch.inference_mode()
     def zo_eval_forward(self, *args, **kwargs):
+        """
+        Forward pass in evaluation mode.
+        """
         output = self.inner_zo_eval_forward(*args, **kwargs)
         return output
     

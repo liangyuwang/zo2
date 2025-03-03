@@ -1,8 +1,19 @@
 import torch
 from torch.optim.optimizer import Optimizer
 
-class BaseOptimizer(Optimizer):
+class BaseOptimizer(Optimizer):    
+    """
+    Base class for Zeroth-Order Optimization handling basic setup, including learning rate management.
+    This class is not intended for direct use but provides core functionalities for derived classes.
+    """
     def __init__(self, params, defaults):
+        """
+        Initializes the BaseOptimizer.
+
+        Args:
+            params (iterable): Parameters to optimize or dicts defining parameter groups.
+            defaults (dict): Default optimization options.
+        """
         super().__init__(params, defaults)
         self.lr = defaults["lr"]
         if len(self.param_groups) > 1:
