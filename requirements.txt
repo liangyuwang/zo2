@@ -1,0 +1,207 @@
+Brotli @ file:///croot/brotli-split_1714483155106/work
+Jinja2 @ file:///croot/jinja2_1716993405101/work
+MarkupSafe @ file:///croot/markupsafe_1704205993651/work
+PySocks @ file:///work/ci_py311/pysocks_1676822712504/work
+PyYAML @ file:///croot/pyyaml_1698096049011/work
+Pygments==2.19.1
+_libgcc_mutex==0.1==main
+_openmp_mutex==5.1==1_gnu
+accelerate==0.17.1
+accelerate==0.17.1==pypi_0
+aiohappyeyeballs==2.3.5
+aiohappyeyeballs==2.3.5==pypi_0
+aiohttp==3.10.3
+aiohttp==3.10.3==pypi_0
+aiosignal==1.3.1
+aiosignal==1.3.1==pypi_0
+attrs==24.2.0
+attrs==24.2.0==pypi_0
+blas==1.0==mkl
+brotli-python==1.0.9==py311h6a678d5_8
+bzip2==1.0.8==h5eee18b_6
+ca-certificates==2024.7.2==h06a4308_0
+certifi @ file:///croot/certifi_1720453481653/work/certifi
+certifi==2024.7.4==py311h06a4308_0
+charset-normalizer @ file:///croot/charset-normalizer_1721748349566/work
+charset-normalizer==3.3.2==pyhd3eb1b0_0
+cuda-cudart==12.1.105==0
+cuda-cupti==12.1.105==0
+cuda-libraries==12.1.0==0
+cuda-nvrtc==12.1.105==0
+cuda-nvtx==12.1.105==0
+cuda-opencl==12.6.37==0
+cuda-runtime==12.1.0==0
+cuda-version==12.6==3
+datasets==2.20.0
+datasets==2.20.0==pypi_0
+dill==0.3.8
+dill==0.3.8==pypi_0
+docstring-parser==0.16==pypi_0
+docstring_parser==0.16
+ffmpeg==4.3==hf484d3e_0
+filelock @ file:///croot/filelock_1700591183607/work
+filelock==3.13.1==py311h06a4308_0
+freetype==2.12.1==h4a9f257_0
+frozenlist==1.4.1
+frozenlist==1.4.1==pypi_0
+fsspec==2024.5.0
+fsspec==2024.5.0==pypi_0
+gmp==6.2.1==h295c915_3
+gmpy2 @ file:///work/ci_py311/gmpy2_1676839849213/work
+gmpy2==2.1.2==py311hc9b5ff0_0
+gnutls==3.6.15==he1e5248_0
+huggingface-hub==0.24.5
+huggingface-hub==0.24.5==pypi_0
+idna @ file:///croot/idna_1714398848350/work
+idna==3.7==py311h06a4308_0
+intel-openmp==2023.1.0==hdb19cb5_46306
+jinja2==3.1.4==py311h06a4308_0
+joblib==1.4.2
+joblib==1.4.2==pypi_0
+jpeg==9e==h5eee18b_3
+lame==3.100==h7b6447c_0
+lcms2==2.12==h3be6417_0
+ld_impl_linux-64==2.38==h1181459_1
+lerc==3.0==h295c915_0
+libcublas==12.1.0.26==0
+libcufft==11.0.2.4==0
+libcufile==1.11.0.15==0
+libcurand==10.3.7.37==0
+libcusolver==11.4.4.55==0
+libcusparse==12.0.2.55==0
+libdeflate==1.17==h5eee18b_1
+libffi==3.4.4==h6a678d5_1
+libgcc-ng==11.2.0==h1234567_1
+libgomp==11.2.0==h1234567_1
+libiconv==1.16==h5eee18b_3
+libidn2==2.3.4==h5eee18b_0
+libjpeg-turbo==2.0.0==h9bf148f_0
+libnpp==12.0.2.50==0
+libnvjitlink==12.1.105==0
+libnvjpeg==12.1.1.14==0
+libpng==1.6.39==h5eee18b_0
+libstdcxx-ng==11.2.0==h1234567_1
+libtasn1==4.19.0==h5eee18b_0
+libtiff==4.5.1==h6a678d5_0
+libunistring==0.9.10==h27cfd23_0
+libuuid==1.41.5==h5eee18b_0
+libwebp-base==1.3.2==h5eee18b_0
+llvm-openmp==14.0.6==h9e868ea_0
+lz4-c==1.9.4==h6a678d5_1
+markdown-it-py==3.0.0
+markdown-it-py==3.0.0==pypi_0
+markupsafe==2.1.3==py311h5eee18b_0
+mdurl==0.1.2
+mdurl==0.1.2==pypi_0
+mkl-fft @ file:///croot/mkl_fft_1695058164594/work
+mkl-random @ file:///croot/mkl_random_1695059800811/work
+mkl-service==2.4.0
+mkl-service==2.4.0==py311h5eee18b_1
+mkl==2023.1.0==h213fc3f_46344
+mkl_fft==1.3.8==py311h5eee18b_0
+mkl_random==1.2.4==py311hdb19cb5_0
+mpc==1.1.0==h10f8cd9_1
+mpfr==4.0.2==hb69a4c5_1
+mpmath @ file:///croot/mpmath_1690848262763/work
+mpmath==1.3.0==py311h06a4308_0
+multidict==6.0.5
+multidict==6.0.5==pypi_0
+multiprocess==0.70.16
+multiprocess==0.70.16==pypi_0
+ncurses==6.4==h6a678d5_0
+nettle==3.7.3==hbbd107a_1
+networkx @ file:///croot/networkx_1720002482208/work
+networkx==3.3==py311h06a4308_0
+numpy @ file:///croot/numpy_and_numpy_base_1708638617955/work/dist/numpy-1.26.4-cp311-cp311-linux_x86_64.whl#sha256=5f96f274d410a1682519282ae769c877d32fdbf171aa8badec7bf5e1d3a1748a
+numpy-base==1.26.4==py311hf175353_0
+numpy==1.26.4==py311h08b1b3b_0
+nvidia-ml-py==12.570.86
+nvidia-ml-py==12.570.86==pypi_0
+openh264==2.1.1==h4ff587b_0
+openjpeg==2.5.2==he7f1fd0_0
+openssl==3.0.14==h5eee18b_0
+opt-einsum==3.3.0
+opt-einsum==3.3.0==pypi_0
+packaging==24.1
+packaging==24.1==pypi_0
+pandas==2.2.2
+pandas==2.2.2==pypi_0
+pillow @ file:///croot/pillow_1721059439630/work
+pillow==10.4.0==py311h5eee18b_0
+pip==24.0==py311h06a4308_0
+psutil==6.0.0
+psutil==6.0.0==pypi_0
+pyarrow-hotfix==0.6
+pyarrow-hotfix==0.6==pypi_0
+pyarrow==17.0.0
+pyarrow==17.0.0==pypi_0
+pygments==2.19.1==pypi_0
+pysocks==1.7.1==py311h06a4308_0
+python-dateutil==2.9.0.post0
+python-dateutil==2.9.0.post0==pypi_0
+python==3.11.9==h955ad1f_0
+pytorch-cuda==12.1==ha16c6d3_5
+pytorch-mutex==1.0==cuda
+pytorch==2.4.0==py3.11_cuda12.1_cudnn9.1.0_0
+pytz==2024.1
+pytz==2024.1==pypi_0
+pyyaml==6.0.1==py311h5eee18b_0
+readline==8.2==h5eee18b_0
+regex==2024.7.24
+regex==2024.7.24==pypi_0
+requests @ file:///croot/requests_1721410876868/work
+requests==2.32.3==py311h06a4308_0
+rich==13.9.4
+rich==13.9.4==pypi_0
+safetensors==0.5.2
+safetensors==0.5.2==pypi_0
+scikit-learn==1.5.1
+scikit-learn==1.5.1==pypi_0
+scipy==1.14.0
+scipy==1.14.0==pypi_0
+setuptools==72.1.0==py311h06a4308_0
+shtab==1.7.1
+shtab==1.7.1==pypi_0
+six==1.16.0
+six==1.16.0==pypi_0
+sqlite==3.45.3==h5eee18b_0
+sympy @ file:///croot/sympy_1701397643339/work
+sympy==1.12==py311h06a4308_0
+tbb==2021.8.0==hdb19cb5_0
+threadpoolctl==3.5.0
+threadpoolctl==3.5.0==pypi_0
+tk==8.6.14==h39e8969_0
+tokenizers==0.13.3
+tokenizers==0.13.3==pypi_0
+torch==2.4.0
+torchaudio==2.4.0
+torchaudio==2.4.0==py311_cu121
+torchtriton==3.0.0==py311
+torchvision==0.19.0
+torchvision==0.19.0==py311_cu121
+tqdm==4.66.5
+tqdm==4.66.5==pypi_0
+transformers==4.28.1
+transformers==4.28.1==pypi_0
+triton==3.0.0
+trl==0.7.4
+trl==0.7.4==pypi_0
+typeguard==4.4.2
+typeguard==4.4.2==pypi_0
+typing_extensions @ file:///croot/typing_extensions_1715268824938/work
+typing_extensions==4.11.0==py311h06a4308_0
+tyro==0.9.16
+tyro==0.9.16==pypi_0
+tzdata==2024.1
+tzdata==2024.1==pypi_0
+urllib3 @ file:///croot/urllib3_1718912636303/work
+urllib3==2.2.2==py311h06a4308_0
+wheel==0.43.0==py311h06a4308_0
+xxhash==3.4.1
+xxhash==3.4.1==pypi_0
+xz==5.4.6==h5eee18b_1
+yaml==0.2.5==h7b6447c_0
+yarl==1.9.4
+yarl==1.9.4==pypi_0
+zlib==1.2.13==h5eee18b_1
+zstd==1.5.5==hc292b87_2
