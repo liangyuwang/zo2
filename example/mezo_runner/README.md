@@ -10,7 +10,7 @@ Use `run.py` for all functions (zero-shot/MeZO):
 python run.py {ARGUMENTS}
 ```
 
-Please read `run.py` for a complete list of arguments. We introduce some of the most important ones below.
+Please read [run.py](./run.py) for a complete list of arguments. We introduce some of the most important ones below.
 
 * `--num_train`: Number of training examples.
 * `--num_dev`: Number of validation examples.
@@ -20,8 +20,26 @@ Please read `run.py` for a complete list of arguments. We introduce some of the 
 * `--trainer`: can be `none` (zero-shot), `regular` (fine-tuning), or `zo` (MeZO).
 * `--train_as_classification`: turn this on for classification tasks (Cross Entropy over likelihood of each class' label words). Otherwise it is LM-style teacher forcing.
 * `--zo_eps`: MeZO hyperparameter epsilon.
+* `--zo_method`: choose zeroth-order methods.
+* `--zo_mode_`: can be `zo` (on device) or `zo2` (offloading).
+* `--offloading_device`: offloading device.
+* `--working_device`: main working device.
 
 ```bash
 # MeZO (full-parameter fine-tuning)
 MODEL=facebook/opt-6.7b TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 STEPS=4000 EVAL_STEPS=2000 bash mezo.sh
 ```
+
+## Supported Tasks (See [tasks.py](./tasks.py))
+
+- **SST2**
+- **Copa**
+- **BoolQ**
+- **MultiRC**
+- **CB**
+- **WIC**
+- **WSC**
+- **ReCoRD**
+- **RTE**
+- **SQuAD**
+- **DROP**

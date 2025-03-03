@@ -113,7 +113,8 @@ class OurArguments(TrainingArguments):
     save_on_interrupt: bool = False # save model when interrupted (useful for long training)
 
     # ZO2 added -> ZO2 configs
-    zo_method: str = "zo2"
+    zo_method: str = "mezo-sgd"
+    zo_mode: str = "zo2"
     offloading_device: str = "cpu"
     working_device: str = "cuda:0"
 
@@ -190,7 +191,7 @@ class Framework:
             # Set up ZO configuration
             self.zo_config = ZOConfig(
                 method="mezo-sgd",
-                zo2=(self.args.zo_method == "zo2"),
+                zo2=(self.args.zo_mode == "zo2"),
                 lr=self.args.learning_rate,
                 weight_decay=self.args.weight_decay,
                 eps=self.args.zo_eps,
