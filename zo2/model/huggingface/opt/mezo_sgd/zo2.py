@@ -556,51 +556,6 @@ class OptimizerOPTDecoder(MeZO2SGD):
                         f" {head_mask.size()[0]}."
                     )
 
-        # for idx, decoder_layer in enumerate(self.model.layers):
-        #     # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
-        #     if output_hidden_states:
-        #         all_hidden_states += (hidden_states,)
-
-        #     dropout_probability = random.uniform(0, 1)
-        #     if self.model.training and (dropout_probability < self.model.layerdrop):
-        #         continue
-
-        #     past_key_value = past_key_values[idx] if past_key_values is not None else None
-
-        #     if self.model.gradient_checkpointing and self.model.training:
-
-        #         def create_custom_forward(module):
-        #             def custom_forward(*inputs):
-        #                 # None for past_key_value
-        #                 return module(*inputs, output_attentions, None)
-
-        #             return custom_forward
-
-        #         layer_outputs = torch.utils.checkpoint.checkpoint(
-        #             create_custom_forward(decoder_layer),
-        #             hidden_states,
-        #             causal_attention_mask,
-        #             head_mask[idx] if head_mask is not None else None,
-        #             None,
-        #         )
-        #     else:
-        #         layer_outputs = decoder_layer(
-        #             hidden_states,
-        #             attention_mask=causal_attention_mask,
-        #             layer_head_mask=(head_mask[idx] if head_mask is not None else None),
-        #             past_key_value=past_key_value,
-        #             output_attentions=output_attentions,
-        #             use_cache=use_cache,
-        #         )
-
-        #     hidden_states = layer_outputs[0]
-
-        #     if use_cache:
-        #         next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
-
-        #     if output_attentions:
-        #         all_self_attns += (layer_outputs[1],)
-        
         N = len(self.model.layers)
         for i in range(1, N):
 
@@ -610,13 +565,6 @@ class OptimizerOPTDecoder(MeZO2SGD):
                         module=self.model.layers[i-2],
                         device=self.offloading_device)
                     
-            # layer_outputs = decoder_layer(
-            #     hidden_states,
-            #     attention_mask=causal_attention_mask,
-            #     layer_head_mask=(head_mask[idx] if head_mask is not None else None),
-            #     output_attentions=output_attentions,
-            #     use_cache=use_cache,
-            # )
             layer_outputs1, layer_outputs2 = self.task_compute_module(
                 self.model.layers[i-1],
                 inputs1={"hidden_states": hidden_states1, "attention_mask": causal_attention_mask1, 
@@ -685,19 +633,6 @@ class OptimizerOPTDecoder(MeZO2SGD):
                 grad=self.projected_grad,
                 compute_sync=False)
 
-        # # add hidden states from the last decoder layer
-        # if output_hidden_states:
-        #     all_hidden_states += (hidden_states,)
-
-        # # next_cache = next_decoder_cache if use_cache else None
-        # if not return_dict:
-        #     return tuple(v for v in [hidden_states, next_cache, all_hidden_states, all_self_attns] if v is not None)
-        # return BaseModelOutputWithPast(
-        #     last_hidden_state=hidden_states,
-        #     past_key_values=next_cache,
-        #     hidden_states=all_hidden_states,
-        #     attentions=all_self_attns,
-        # )
         return hidden_states1, hidden_states2
 
     @torch.inference_mode
@@ -816,51 +751,6 @@ class OptimizerOPTDecoder(MeZO2SGD):
                         f" {head_mask.size()[0]}."
                     )
 
-        # for idx, decoder_layer in enumerate(self.model.layers):
-        #     # add LayerDrop (see https://arxiv.org/abs/1909.11556 for description)
-        #     if output_hidden_states:
-        #         all_hidden_states += (hidden_states,)
-
-        #     dropout_probability = random.uniform(0, 1)
-        #     if self.model.training and (dropout_probability < self.model.layerdrop):
-        #         continue
-
-        #     past_key_value = past_key_values[idx] if past_key_values is not None else None
-
-        #     if self.model.gradient_checkpointing and self.model.training:
-
-        #         def create_custom_forward(module):
-        #             def custom_forward(*inputs):
-        #                 # None for past_key_value
-        #                 return module(*inputs, output_attentions, None)
-
-        #             return custom_forward
-
-        #         layer_outputs = torch.utils.checkpoint.checkpoint(
-        #             create_custom_forward(decoder_layer),
-        #             hidden_states,
-        #             causal_attention_mask,
-        #             head_mask[idx] if head_mask is not None else None,
-        #             None,
-        #         )
-        #     else:
-        #         layer_outputs = decoder_layer(
-        #             hidden_states,
-        #             attention_mask=causal_attention_mask,
-        #             layer_head_mask=(head_mask[idx] if head_mask is not None else None),
-        #             past_key_value=past_key_value,
-        #             output_attentions=output_attentions,
-        #             use_cache=use_cache,
-        #         )
-
-        #     hidden_states = layer_outputs[0]
-
-        #     if use_cache:
-        #         next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
-
-        #     if output_attentions:
-        #         all_self_attns += (layer_outputs[1],)
-
         N = len(self.model.layers)
         for i in range(1, N):
 
@@ -882,13 +772,6 @@ class OptimizerOPTDecoder(MeZO2SGD):
                 inputs2=None,
                 compute_sync=False)
 
-            # layer_outputs = decoder_layer(
-            #     hidden_states,
-            #     attention_mask=causal_attention_mask,
-            #     layer_head_mask=(head_mask[idx] if head_mask is not None else None),
-            #     output_attentions=output_attentions,
-            #     use_cache=use_cache,
-            # )
             layer_outputs = self.task_compute_module(
                 self.model.layers[i-1],
                 inputs1={"hidden_states": hidden_states, "attention_mask": causal_attention_mask, 
@@ -1063,16 +946,6 @@ class OptimizerOPTModel(MeZO2SGD):
         
         return output
 
-        # if not return_dict:
-        #     return decoder_outputs
-
-        # return BaseModelOutputWithPast(
-        #     last_hidden_state=decoder_outputs.last_hidden_state,
-        #     past_key_values=decoder_outputs.past_key_values,
-        #     hidden_states=decoder_outputs.hidden_states,
-        #     attentions=decoder_outputs.attentions,
-        # )
-
     @torch.inference_mode
     def inner_zo_eval_forward(
         self,
@@ -1212,18 +1085,6 @@ class OptimizerOPTForCausalLM(MeZO2SGD):
                         inputs2={"self": self.model, "loss": loss2, "input_ids": input_ids, "logits": logits2, "labels": labels})
 
         return loss1, loss2
-
-        # if not return_dict:
-        #     output = (logits,) + outputs[1:]
-        #     return (loss,) + output if loss is not None else output
-
-        # return CausalLMOutputWithPast(
-        #     loss=loss,
-        #     logits=logits,
-        #     past_key_values=outputs.past_key_values,
-        #     hidden_states=outputs.hidden_states,
-        #     attentions=outputs.attentions,
-        # )
 
     @torch.inference_mode
     def inner_zo_eval_forward(
@@ -1458,18 +1319,6 @@ class OptimizerOPTForSequenceClassification(MeZO2SGD):
 
         return loss1, loss2
         
-        # if not return_dict:
-        #     output = (pooled_logits,) + transformer_outputs[1:]
-        #     return ((loss,) + output) if loss is not None else output
-
-        # return SequenceClassifierOutputWithPast(
-        #     loss=loss,
-        #     logits=pooled_logits,
-        #     past_key_values=transformer_outputs.past_key_values,
-        #     hidden_states=transformer_outputs.hidden_states,
-        #     attentions=transformer_outputs.attentions,
-        # )
-
     @torch.inference_mode
     def inner_zo_eval_forward(
         self,
@@ -1663,18 +1512,6 @@ class OptimizerOPTForQuestionAnswering(MeZO2SGD):
 
         return loss1, loss2
         
-        # if not return_dict:
-        #     output = (start_logits, end_logits) + transformer_outputs[2:]
-        #     return ((total_loss,) + output) if total_loss is not None else output
-
-        # return QuestionAnsweringModelOutput(
-        #     loss=total_loss,
-        #     start_logits=start_logits,
-        #     end_logits=end_logits,
-        #     hidden_states=transformer_outputs.hidden_states,
-        #     attentions=transformer_outputs.attentions,
-        # )
-
     @torch.inference_mode
     def inner_zo_eval_forward(
         self,
