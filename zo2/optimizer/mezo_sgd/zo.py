@@ -23,6 +23,7 @@ class MeZOSGD(BaseOptimizer):
             model (nn.Module): The model whose parameters will be optimized.
             config (MeZOSGDConfig): Configuration object containing optimizer settings.
         """
+        self.config = config
         self.model = model
         self.lr = config.lr
         self.weight_decay = config.weight_decay

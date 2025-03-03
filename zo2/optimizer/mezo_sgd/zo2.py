@@ -37,6 +37,11 @@ class MeZO2SGD(MeZOSGD):
         self.compute_module_optimize_method = config.compute_module_optimize_method
         self.compute_function_optimize_method = config.compute_function_optimize_method
         self.communicate_optimize_method = config.communicate_optimize_method
+        self.amp = config.amp
+        self.amp_precision = config.amp_precision
+        self.precision_on_offloading_device = config.precision_on_offloading_device
+        self.precision_on_working_device = config.precision_on_working_device
+        self.amp_compress_method = config.amp_compress_method
         self.init_zo2()
     
     def init_zo2(self):
@@ -53,7 +58,19 @@ class MeZO2SGD(MeZOSGD):
         self.last_rstate = None
         self.projected_grad = 0
         self.init_zo2_upload()
+        if self.amp: self.init_zo2_amp()
     
+    def init_zo2_amp(self):
+        working_device = torch.device(self.device)
+        offloading_device = torch.device(self.offloading_device)
+        for p in self.model.parameters():
+            if p.device == working_device:
+                p.data = p.data.to(dtype=self.precision_on_working_device)
+            elif p.device == offloading_device:
+                p.data = p.data.to(dtype=self.precision_on_offloading_device)
+            else:
+                raise ValueError(f"Unsupported device found for parameter: {p.device}")
+
     def assign_zo2_attributes(self, source, target):
         """
         Utility function to transfer ZO2 specific attributes from one module to another,
@@ -321,7 +338,7 @@ class MeZO2SGD(MeZOSGD):
                 )
             else:
                 raise ValueError("Invalid inputs type.")
-    
+
     #*********************** evaluate ***********************#
 
     @torch.inference_mode()
@@ -424,7 +441,7 @@ class MeZO2SGD(MeZOSGD):
         """
         def _upload_impl(module, device, offloading_device, *args, **kwargs):
             if offloading_device == "cpu":
-                return module.to(device, *args, **kwargs)
+                module = module.to(device, *args, **kwargs)
             else:
                 if module_id == None:
                     raise ValueError("For disk offloading mode, 'module_id' cannot be None.")
@@ -437,15 +454,19 @@ class MeZO2SGD(MeZOSGD):
                     case _:
                         raise ValueError
                 clear_disk_offload_path(offloading_device, module_id)
+            return module
         match optimize_method:
             case "":
-                return _upload_impl(module, device, offloading_device, *args, **kwargs)
+                module = _upload_impl(module, device, offloading_device, *args, **kwargs)
             case "bucket":  # works on large-scale models
                 bucket, shapes = module_to_bucket_inplace(module)
                 bucket = _upload_impl(bucket, device, offloading_device, *args, **kwargs)
-                return bucket_to_module_inplace(bucket, module, shapes)
+                module = bucket_to_module_inplace(bucket, module, shapes)
             case _:
                 raise NotImplementedError
+        if self.amp:    # after uploading, decompress the module to higher precision
+            module = self.amp_decompress_impl(module)
+        return module
 
     def offload_impl(
             self,
@@ -462,7 +483,7 @@ class MeZO2SGD(MeZOSGD):
         """
         def _offload_impl(module, device, offloading_device, *args, **kwargs):
             if offloading_device == "cpu":
-                return module.to(device, *args, **kwargs)
+                module = module.to(device, *args, **kwargs)
             else:
                 if module_id == None:
                     raise ValueError("For disk offloading mode, 'module_id' cannot be None.")
@@ -474,16 +495,19 @@ class MeZO2SGD(MeZOSGD):
                         torch.save(module.state_dict(), offloading_disk_path)
                     case _:
                         raise ValueError
-                return module
+            return module
+        if self.amp:    # before offloading, compress the module to lower precision
+            module = self.amp_compress_impl(module)
         match optimize_method:
             case "":
-                return _offload_impl(module, device, offloading_device, *args, **kwargs)
+                module = _offload_impl(module, device, offloading_device, *args, **kwargs)
             case "bucket":  # works on large-scale models
                 bucket, shapes = module_to_bucket_inplace(module)
                 bucket = _offload_impl(bucket, device, offloading_device, *args, **kwargs)
-                return bucket_to_module_inplace(bucket, module, shapes)
+                module = bucket_to_module_inplace(bucket, module, shapes)
             case _:
                 raise NotImplementedError
+        return module
         
     def compute_module_impl(
             self,
@@ -505,10 +529,11 @@ class MeZO2SGD(MeZOSGD):
                 module = torch.compile(module, **optimize_kwargs)
             case _:
                 raise NotImplementedError
-        if forward_fn is None:
-            return module(*args, **kwargs)
-        else:
-            return forward_fn(module=module, *args, **kwargs)
+        with torch.autocast(device_type=self.device, dtype=self.amp_precision, enabled=self.amp):
+            if forward_fn is None:
+                return module(*args, **kwargs)
+            else:
+                return forward_fn(module=module, *args, **kwargs)
 
     def compute_function_impl(
             self,
@@ -530,10 +555,29 @@ class MeZO2SGD(MeZOSGD):
                 fn = torch.jit.script(fn, **optimize_kwargs)
             case _:
                 raise NotImplementedError
-        if function_fn is None:
-            return fn(*args, **kwargs)
-        else:
-            return function_fn(fn, *args, **kwargs)
+        with torch.autocast(device_type=self.device, dtype=self.amp_precision, enabled=self.amp):
+            if function_fn is None:
+                return fn(*args, **kwargs)
+            else:
+                return function_fn(fn, *args, **kwargs)
+
+    def amp_decompress_impl(self, module: nn.Module) -> nn.Module:
+        for p in module.parameters():
+            match self.amp_compress_method:
+                case "naive":
+                    p.data = p.data.to(dtype=self.precision_on_working_device)
+                case _:
+                    raise NotImplementedError
+        return module
+
+    def amp_compress_impl(self, module: nn.Module) -> nn.Module:
+        for p in module.parameters():
+            match self.amp_compress_method:
+                case "naive":
+                    p.data = p.data.to(dtype=self.precision_on_offloading_device)
+                case _:
+                    raise NotImplementedError
+        return module
 
     #*********************** api ***********************#
 
@@ -630,5 +674,3 @@ class MeZO2SGD(MeZOSGD):
         self.clear_zo2_eval_comm_hooks(handles)
         return output
     
-class MeZO2SGDAMP(MeZO2SGD):
-    ...
