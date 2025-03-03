@@ -342,6 +342,7 @@ class ZOTrainer(Trainer):
         if args.gradient_checkpointing:
             self.model.gradient_checkpointing_enable()
 
+        # ZO2 added ->
         # model = self._wrap_model(self.model_wrapped)
         model = self.model
 
@@ -352,11 +353,19 @@ class ZOTrainer(Trainer):
         if model is not self.model:
             self.model_wrapped = model
 
+        # ZO2 added ->
         if delay_optimizer_creation:
-            self.create_optimizer_and_scheduler(num_training_steps=max_steps)
+            if self.zo:
+                self.create_optimizer_and_scheduler(num_training_steps=max_steps, model=model)
+            else:
+                self.create_optimizer_and_scheduler(num_training_steps=max_steps)
 
+        # ZO2 added ->
         # Check if saved optimizer or scheduler states exist
-        self._load_optimizer_and_scheduler(resume_from_checkpoint)
+        if self.zo:
+            _, model = self._load_optimizer_and_scheduler(resume_from_checkpoint, model)
+        else:
+            self._load_optimizer_and_scheduler(resume_from_checkpoint)
 
         # important: at this point:
         # self.model         is the Transformers Model
@@ -514,7 +523,7 @@ class ZOTrainer(Trainer):
                 if step % args.gradient_accumulation_steps == 0:
                     self.control = self.callback_handler.on_step_begin(args, self.state, self.control)
 
-                # ZO2 added: estimate gradient and updates
+                # ZO2 added -> estimate gradient and updates
                 if self.zo:
                     tr_loss_step = self.zo2_training_step(model, inputs)
                 else:
@@ -550,7 +559,7 @@ class ZOTrainer(Trainer):
                     steps_in_epoch <= args.gradient_accumulation_steps
                     and (step + 1) == steps_in_epoch
                 ):
-                    # ZO2 added: ignore parameter update since it is fuesd with model forward
+                    # ZO2 added -> ignore parameter update since it is fuesd with model forward
                     if self.zo:
                         pass
                     else:
@@ -684,19 +693,38 @@ class ZOTrainer(Trainer):
         return TrainOutput(self.state.global_step, train_loss, metrics)
     
 
-    def _load_optimizer_and_scheduler(self, resume_from_checkpoint):
+    def _load_optimizer_and_scheduler(self, checkpoint, model=None):
         """
-        disable the optimizer and the learning rate scheduler resume.
+        disable the optimizer resume.
         """
+        output = super()._load_optimizer_and_scheduler(checkpoint)
+        if self.zo and model is not None:
+            model.opt = self.optimizer
+            return output, model
+        return output
+
+    def create_optimizer_and_scheduler(self, num_training_steps: int, model: nn.Module=None):
+        """
+        disable the optimizer but leave the learning rate scheduler.
+        """
+        if not self.zo:
+            self.create_optimizer()
+            if IS_SAGEMAKER_MP_POST_1_10 and smp.state.cfg.fp16:
+                # If smp >= 1.10 and fp16 is enabled, we unwrap the optimizer
+                optimizer = self.optimizer.optimizer
+            else:
+                optimizer = self.optimizer
+        else:
+            if model is None:
+                optimizer = self.optimizer = self.model.opt
+            else:
+                optimizer = self.optimizer = model.opt
+        self.create_scheduler(num_training_steps, optimizer)
+
+    def _move_model_to_device(self, model, device):
         pass
 
-
-    def create_optimizer_and_scheduler(self, num_training_steps: int):
-        """
-        disable the optimizer and the learning rate scheduler.
-        """
-        pass
-
+    #*********************** zo2 functions ***********************#
 
     def _zo2_unsupported_conditions(self, args):
         if args.gradient_accumulation_steps > 1:
@@ -733,81 +761,3 @@ class ZOTrainer(Trainer):
                 model, inputs, loss = post_hook_fn(model, inputs, loss)
         return loss
     
-
-    def _get_learning_rate(self):
-        if self.zo:
-            return self.model.opt.lr
-        else:
-            return super()._get_learning_rate()
-    
-
-    def _save_checkpoint(self, model, trial, metrics=None):
-        # In all cases, including ddp/dp/deepspeed, self.model is always a reference to the model we
-        # want to save except FullyShardedDDP.
-        # assert unwrap_model(model) is self.model, "internal model should be a reference to self.model"
-
-        # Save model checkpoint
-        checkpoint_folder = f"{PREFIX_CHECKPOINT_DIR}-{self.state.global_step}"
-
-        if self.hp_search_backend is None and trial is None:
-            self.store_flos()
-
-        run_dir = self._get_output_dir(trial=trial)
-        output_dir = os.path.join(run_dir, checkpoint_folder)
-        self.save_model(output_dir, _internal_call=True)
-
-        # Determine the new best metric / best model checkpoint
-        if metrics is not None and self.args.metric_for_best_model is not None:
-            metric_to_check = self.args.metric_for_best_model
-            if not metric_to_check.startswith("eval_"):
-                metric_to_check = f"eval_{metric_to_check}"
-            metric_value = metrics[metric_to_check]
-
-            operator = np.greater if self.args.greater_is_better else np.less
-            if (
-                self.state.best_metric is None
-                or self.state.best_model_checkpoint is None
-                or operator(metric_value, self.state.best_metric)
-            ):
-                self.state.best_metric = metric_value
-                self.state.best_model_checkpoint = output_dir
-
-        # Save the Trainer state
-        if self.args.should_save:
-            self.state.save_to_json(os.path.join(output_dir, TRAINER_STATE_NAME))
-
-        # Save RNG state in non-distributed training
-        rng_states = {
-            "python": random.getstate(),
-            "numpy": np.random.get_state(),
-            "cpu": torch.random.get_rng_state(),
-        }
-        if torch.cuda.is_available():
-            if self.args.local_rank == -1:
-                # In non distributed, we save the global CUDA RNG state (will take care of DataParallel)
-                rng_states["cuda"] = torch.cuda.random.get_rng_state_all()
-            else:
-                rng_states["cuda"] = torch.cuda.random.get_rng_state()
-
-        if is_torch_tpu_available():
-            rng_states["xla"] = xm.get_rng_state()
-
-        # A process can arrive here before the process 0 has a chance to save the model, in which case output_dir may
-        # not yet exist.
-        os.makedirs(output_dir, exist_ok=True)
-
-        if self.args.world_size <= 1:
-            torch.save(rng_states, os.path.join(output_dir, "rng_state.pth"))
-        else:
-            torch.save(rng_states, os.path.join(output_dir, f"rng_state_{self.args.process_index}.pth"))
-
-        if self.args.push_to_hub:
-            self._push_from_checkpoint(output_dir)
-
-        # Maybe delete some older checkpoints.
-        if self.args.should_save:
-            self._rotate_checkpoints(use_mtime=True, output_dir=run_dir)
-    
-
-    def _move_model_to_device(self, model, device):
-        pass

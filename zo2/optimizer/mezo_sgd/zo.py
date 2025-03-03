@@ -4,33 +4,33 @@ sys.path.append('./zo2')
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from ..base import BaseOptimizer
 import numpy as np
 
 from ...config.mezo_sgd import MeZOSGDConfig
 
 
-class MeZOSGD:
+class MeZOSGD(BaseOptimizer):
     """
         MeZO-SGD
     """
-    def __init__(self, model, config: MeZOSGDConfig):
+    def __init__(self, model: nn.Module, config: MeZOSGDConfig):
         self.model = model
         self.lr = config.lr
         self.weight_decay = config.weight_decay
         self.zo_eps = config.eps
         self.max_zo_random_seed = config.max_zo_random_seed
         self.debug_mode = config.debug_mode
-    
-    def checkpoint_zo_attributes(self):
-        return {
-            'zo_random_seed': self.zo_random_seed, 
-            'projected_grad': self.projected_grad
-        }
-    
-    def resume_zo_attributes(self, attr_dict: dict):
-        for k, v in attr_dict.items():
-            setattr(self, k, v)
-
+        defaults = dict(
+            lr=self.lr,
+            weight_decay=self.weight_decay,
+            maximize=False,
+            foreach=None,
+            differentiable=False,
+            fused=None,
+        )
+        super().__init__(model.parameters(), defaults)
+        
     @torch.inference_mode
     def zo_perturb_parameters(self, module: nn.Module, scaling_factor: float=1):       
         for _, param in module.named_parameters():
@@ -66,6 +66,7 @@ class MeZOSGD:
 
     @torch.inference_mode
     def zo_forward(self, *args, zo_random_seed: int=None, **kwargs):
+        self._update_lr()
         self.zo_random_seed = zo_random_seed if zo_random_seed else np.random.randint(self.max_zo_random_seed)
         torch.manual_seed(self.zo_random_seed)
         self.zo_perturb_parameters(self.model, scaling_factor=self.zo_perturb_shifts()[0])

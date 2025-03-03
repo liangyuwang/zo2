@@ -17,16 +17,11 @@ class MeZO2SGD(MeZOSGD):
     """
     def __init__(self, model, config: MeZOSGDConfig):
         assert config.zo2, "MeZO2SGD can only work with offloading."
-        self.model = model
-        self.zo_eps = config.eps
-        self.lr = config.lr
-        self.weight_decay = config.weight_decay
+        super().__init__(model, config)
         self.device = config.working_device
         self.offloading_device = config.offloading_device
-        self.max_zo_random_seed = config.max_zo_random_seed
         self.overlap = config.overlap
         self.offloading_blocks = config.offloading_blocks
-        self.debug_mode = config.debug_mode
         self.compute_module_optimize_method = config.compute_module_optimize_method
         self.compute_function_optimize_method = config.compute_function_optimize_method
         self.communicate_optimize_method = config.communicate_optimize_method
@@ -93,6 +88,7 @@ class MeZO2SGD(MeZOSGD):
     
     @torch.inference_mode()
     def zo_forward(self, *args, seed: int=None, **kwargs):
+        self._update_lr()
         self.zo_random_seed = seed if seed else np.random.randint(self.max_zo_random_seed)
         torch.manual_seed(self.zo_random_seed)
         torch.cuda.manual_seed(self.zo_random_seed)
