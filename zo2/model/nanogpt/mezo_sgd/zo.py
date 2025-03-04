@@ -17,8 +17,7 @@ class GPT(model.GPT, BaseZOModel):
             return self.opt.zo_forward(idx, pos, targets)
         else:
             # for evaluate and inference purpose
-            return super().forward(idx, pos, targets)
-            # return self.opt.zo_eval_forward(super().forward, idx, pos, targets)
+            return self.opt.zo_eval_forward(super().forward, idx, pos, targets)
 
 
 class Optimizer(MeZOSGD):
@@ -33,8 +32,8 @@ class Optimizer(MeZOSGD):
         x = self.model.transformer.ln_f(x)
         x = self.model.lm_head(x)
         loss = F.cross_entropy(
-            x[:, :-1, :].reshape(-1, x.size(-1)), 
-            targets[:, 1:].reshape(-1)
+            x.reshape(-1, x.size(-1)), 
+            targets.reshape(-1)
         )
         return loss.detach()
 

@@ -101,10 +101,10 @@ class Optimizer(MeZO2SGD):
                                              inputs2={"input": logits2}, 
                                              grad=self.projected_grad)
         loss1, loss2 = self.task_compute_function(F.cross_entropy,
-                                                  {"input": logits1[:, :-1, :].reshape(-1, logits1.size(-1)), 
-                                                   "target": targets[:, 1:].reshape(-1)},
-                                                  {"input": logits2[:, :-1, :].reshape(-1, logits2.size(-1)), 
-                                                   "target": targets[:, 1:].reshape(-1)})
+                                                  {"input": logits1.reshape(-1, logits1.size(-1)), 
+                                                   "target": targets.reshape(-1)},
+                                                  {"input": logits2.reshape(-1, logits2.size(-1)), 
+                                                   "target": targets.reshape(-1)})
         return loss1, loss2
     
     @torch.inference_mode()   
