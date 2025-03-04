@@ -122,7 +122,6 @@ Please refer to [test](./test/)
 
   - [ ] HF LLaMA
   - [ ] HF GPT
-- [ ] Support [AMP](https://pytorch.org/tutorials/recipes/recipes/amp_recipe.html) mode
 - [ ] Support more ZO methods
 - [ ] Support more offloading strategies
 
