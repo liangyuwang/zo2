@@ -94,11 +94,11 @@ trainer = ZOSFTTrainer(  # or ZOTrainer
 trainer.train()
 ```
 
-### 3. Using [MeZO-Runner](example/mezo_runner/README.md) to evaluate fine-tuning tasks
+### 3. Using [MeZO-Runner](example/mezo_runner/) to evaluate fine-tuning tasks
 
 ## ✨ Tutorial
 
-In progress...
+Please refer to [tutorial](./tutorial/)
 
 ## 🤖 Supported Models, ZO methods, and Tasks
 
@@ -110,11 +110,11 @@ In progress...
 - **ZO methods**:
 
   * [MeZO-SGD](https://arxiv.org/abs/2305.17333)
-- **Tasks**: In progress...
+- **Tasks**: Please refer to [MeZO-Runner](example/mezo_runner/)
 
 ## 🧪 Test
 
-See [test/README.md](test/README.md)
+Please refer to [test](./test/)
 
 ## 🧭 Future Directions
 
