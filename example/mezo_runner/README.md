@@ -25,9 +25,10 @@ Please read [run.py](./run.py) for a complete list of arguments. We introduce so
 * `--offloading_device`: offloading device.
 * `--working_device`: main working device.
 
+Example: 
 ```bash
 # MeZO (full-parameter fine-tuning)
-MODEL=facebook/opt-6.7b TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 STEPS=4000 EVAL_STEPS=2000 bash mezo.sh
+MODEL=facebook/opt-2.7b TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 STEPS=20000 EVAL_STEPS=4000 bash mezo.sh
 ```
 
 ## Supported Tasks (See [tasks.py](./tasks.py))
