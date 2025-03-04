@@ -57,9 +57,9 @@ def model_size(model: torch.nn.Module):
 
 
 def prepare_data_for_causalLM(V, B, T, device='cuda'):
-    data_batch = torch.randint(0, V, (B, T+1)).to(device)
-    input_ids = data_batch[:, :T]
-    labels = data_batch[:, 1:T+1]
+    data_batch = torch.randint(0, V, (B, T)).to(device)
+    input_ids = data_batch
+    labels = data_batch
     return input_ids, labels
 
 def prepare_data_for_sequence_classification(V, B, T, device='cuda'):

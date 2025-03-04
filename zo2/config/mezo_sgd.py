@@ -22,10 +22,10 @@ class MeZOSGDConfig:
     compute_function_optimize_method: str = ''   # '', 'torch.jit.script'
     communicate_optimize_method: str = ''   # '', 'bucket'
     amp: bool = False   # use amp or not
-    amp_precision: torch.dtype = torch.bfloat16 # amp autocast precision
+    amp_precision: torch.dtype = torch.bfloat16 # amp autocast precision, valid when using amp
     precision_on_offloading_device: torch.dtype = torch.float16 # precision on offloading device, valid when using amp
     precision_on_working_device: torch.dtype = torch.float32    # precision on working device, valid when using amp
-    amp_compress_method: str = 'naive'  # currently only support naive amp compress
+    amp_compress_method: str = 'naive'  # currently only support naive amp compress, valid when using amp
 
     # debug
     debug_mode: bool = False    # set 'True' to disable random noise
