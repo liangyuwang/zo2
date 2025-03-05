@@ -36,35 +36,14 @@ conda activate zo2
 
 We utilize the [OPT](https://arxiv.org/abs/2205.01068) models and [MeZO-SGD](https://arxiv.org/abs/2305.17333) as examples. For additional information, please refer to the section on [Supported Models and ZO methods](#-supported-models-zo-methods-and-tasks-support).
 
-### 1. Train HF Models with Custom Training Loop [[demo](example/demo/train_zo2_with_hf_opt.py)]
+### 1. Using [MeZO-Runner](example/mezo_runner/) to evaluate fine-tuning tasks
 
-```python
-from zo2 import ZOConfig, zo_hf_init
-
-# Model and optimizer init
-zo_config = ZOConfig(method="mezo-sgd", zo2=True, offloading_device='cpu', working_device='cuda', lr=1e-5)
-with zo_hf_init(zo_config):
-    from transformers import OPTForCausalLM
-    model = OPTForCausalLM.from_pretrained("facebook/opt-125m")
-    model.zo_init(zo_config)
-
-# Training loop
-for i in range(max_training_step):
-    # Train
-    training_input_ids, training_labels = ...   # get training data batch
-    model.zo_train()
-    loss = model(input_ids=training_input_ids, labels=training_labels)
-    # Evaluate
-    eval_input_ids, eval_labels = ...   # get eval data batch
-    model.zo_eval()     
-    with torch.no_grad():
-        output = model(input_ids=eval_input_ids, labels=eval_labels)
-
-# Final training update
-model.opt.zo_update(model)
+```shell
+cd example/mezo_runner/
+MODEL=facebook/opt-2.7b TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 STEPS=20000 EVAL_STEPS=4000 bash mezo.sh
 ```
 
-### 2. Supervised Fine-Tuning HF Models with ZOTrainer / ZOSFTTrainer
+### 2. Supervised Fine-Tuning HF Models with ZOTrainer / ZOSFTTrainer [[Trainer](./tutorial/huggingface.ipynb)]
 
 ```python
 from zo2 import ZOConfig, zo_hf_init
@@ -94,11 +73,37 @@ trainer = ZOSFTTrainer(  # or ZOTrainer
 trainer.train()
 ```
 
-### 3. Using [MeZO-Runner](example/mezo_runner/) to evaluate fine-tuning tasks
+### 3. Train HF Models with Custom Training Loop [[demo](./tutorial/demo.ipynb)]
+
+```python
+from zo2 import ZOConfig, zo_hf_init
+
+# Model and optimizer init
+zo_config = ZOConfig(method="mezo-sgd", zo2=True, offloading_device='cpu', working_device='cuda', lr=1e-5)
+with zo_hf_init(zo_config):
+    from transformers import OPTForCausalLM
+    model = OPTForCausalLM.from_pretrained("facebook/opt-125m")
+    model.zo_init(zo_config)
+
+# Training loop
+for i in range(max_training_step):
+    # Train
+    training_input_ids, training_labels = ...   # get training data batch
+    model.zo_train()
+    loss = model(input_ids=training_input_ids, labels=training_labels)
+    # Evaluate
+    eval_input_ids, eval_labels = ...   # get eval data batch
+    model.zo_eval()     
+    with torch.no_grad():
+        output = model(input_ids=eval_input_ids, labels=eval_labels)
+
+# Final training update
+model.opt.zo_update(model)
+```
 
 ## ✨ Tutorial
 
-Please refer to [tutorial](./tutorial/)
+Please refer to [tutorial](./tutorial/).
 
 ## 🤖 Supported Models, ZO methods, and Tasks
 
@@ -114,7 +119,7 @@ Please refer to [tutorial](./tutorial/)
 
 ## 🧪 Test
 
-Please refer to [test](./test/)
+Please refer to [test](./test/).
 
 ## 🧭 Future Directions
 
