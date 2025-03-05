@@ -182,7 +182,7 @@ class MeZO2SGD(MeZOSGD):
     
     #*********************** tasks ***********************#
 
-    def task_upload(self, module, device='cuda', upload_sync=True, *args, **kwargs):
+    def task_upload(self, module, device='cuda', upload_sync=False, *args, **kwargs):
         """
         Handles the uploading of modules to the GPU, utilizing CUDA streams to potentially overlap
         computation and communication for efficiency.
@@ -206,7 +206,7 @@ class MeZO2SGD(MeZOSGD):
             )
         return module
 
-    def task_offload(self, module, device='cpu', offload_sync=True, *args, **kwargs):
+    def task_offload(self, module, device='cpu', offload_sync=False, *args, **kwargs):
         """
         Manages the offloading of modules to an alternative storage (e.g., CPU or disk), using CUDA streams
         to manage dependencies and potentially overlap tasks.
@@ -231,7 +231,7 @@ class MeZO2SGD(MeZOSGD):
             )
         return module
     
-    def task_compute_module(self, module, inputs1, inputs2, grad, compute_sync=True, weight_decay=None, *args, **kwargs):
+    def task_compute_module(self, module, inputs1, inputs2, grad, compute_sync=False, weight_decay=None, *args, **kwargs):
         """
         Conducts computations on a module with optional dual inputs for gradient estimation,
         applying synchronization and CUDA streams for efficiency.
@@ -291,7 +291,7 @@ class MeZO2SGD(MeZOSGD):
             else:
                 raise ValueError("Invalid inputs type.")
     
-    def task_compute_function(self, fn, inputs1, inputs2, compute_sync=True, *args, **kwargs):
+    def task_compute_function(self, fn, inputs1, inputs2, compute_sync=False, *args, **kwargs):
         """
         Executes a provided function with dual input sets to facilitate parallel operations
         and gradient estimation. This method integrates CUDA streams for efficient task execution.
