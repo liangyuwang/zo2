@@ -229,6 +229,7 @@ def test_mezo2_sgd_causalLM_training():
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
+    zo_cfg.overlap = args.overlap=="all"
     train_mezo2_sgd_causalLM(model_config, zo_cfg, device=args.working_device)
 
 def test_mezo_sgd_causalLM_eval():
@@ -249,6 +250,7 @@ def test_mezo2_sgd_causalLM_eval():
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
+    zo_cfg.overlap = args.overlap=="all"
     eval_mezo2_sgd_causalLM(model_config, zo_cfg, device=args.working_device)
 
 
@@ -270,6 +272,7 @@ def test_mezo2_sgd_sequence_classification_training():
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
+    zo_cfg.overlap = args.overlap=="all"
     train_mezo2_sgd_sequence_classification(model_config, zo_cfg, device=args.working_device)
 
 def test_mezo_sgd_sequence_classification_eval():
@@ -290,6 +293,7 @@ def test_mezo2_sgd_sequence_classification_eval():
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
+    zo_cfg.overlap = args.overlap=="all"
     eval_mezo2_sgd_sequence_classification(model_config, zo_cfg, device=args.working_device)
 
 
@@ -311,6 +315,7 @@ def test_mezo2_sgd_question_answering_training():
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
+    zo_cfg.overlap = args.overlap=="all"
     train_mezo2_sgd_question_answering(model_config, zo_cfg, device=args.working_device)
 
 def test_mezo_sgd_question_answering_eval():
@@ -331,6 +336,7 @@ def test_mezo2_sgd_question_answering_eval():
     zo_cfg = MeZOSGDConfig(lr=args.lr, weight_decay=args.weight_decay, eps=args.zo_eps,
         offloading_device=args.offloading_device, working_device=args.working_device)
     zo_cfg.zo2 = True
+    zo_cfg.overlap = args.overlap=="all"
     eval_mezo2_sgd_question_answering(model_config, zo_cfg, device=args.working_device)
 
 
