@@ -12,6 +12,8 @@ from .utils import *
 
 
 class MeZO2SGD(MeZOSGD):
+    first_call_eval = True  # Class variable specifically for tracking eval function
+    
     """
     Extends MeZOSGD to support advanced offloading techniques that enhance the capability
     to train large models on systems with limited GPU memory. It manages the intricate
@@ -355,6 +357,9 @@ class MeZO2SGD(MeZOSGD):
         Args:
             *args, **kwargs: Arguments and keyword arguments for the model's forward method.
         """
+        if MeZO2SGD.first_call_eval:
+            print("Warning: ZO2 may not efficiently optimize the evaluation stage, which could result in slower performance.")
+            MeZO2SGD.first_call_eval = False  # Disable the warning after the first call
         torch.cuda.synchronize()    # global sync to make sure all tasks finish
         output = self.inner_zo_eval_forward(*args, **kwargs)
         torch.cuda.synchronize()    # global sync to make sure all tasks finish

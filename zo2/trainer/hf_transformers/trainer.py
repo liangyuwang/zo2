@@ -743,9 +743,35 @@ class ZOTrainer(Trainer):
             raise NotImplementedError
 
     def register_zo2_training_step_pre_hook(self, hook_fn):
+        """
+        example:
+            def print_zo_info(model, inputs):
+                tqdm.write("projected grad: {}".format(model.opt.projected_grad))
+                return model, inputs
+            trainer = ZOTrainer(...)
+            trainer.register_zo2_training_step_pre_hook(print_zo_info)
+        """
         self.zo2_training_step_pre_hooks.append(hook_fn)
 
     def register_zo2_training_step_post_hook(self, hook_fn):
+        """
+        example:
+            def drop_invalid_data(model, inputs, loss):
+                # Extract projected_grad, handle both tensor and scalar cases
+                projected_grad = model.opt.projected_grad
+                if isinstance(projected_grad, torch.Tensor):
+                    projected_grad_is_nan = torch.isnan(projected_grad).any()
+                else:
+                    projected_grad_is_nan = projected_grad != projected_grad  # Check for NaN in scalars
+                if torch.isnan(loss) or projected_grad_is_nan:
+                    tqdm.write("'loss': {} or 'projected_grad': {} is nan. Drop this step.".format(
+                        loss, model.opt.projected_grad
+                    ))
+                    model.opt.projected_grad = 0  # Reset projected_grad to prevent parameter updates
+                return model, inputs, loss
+            trainer = ZOTrainer(...)
+            trainer.register_zo2_training_step_post_hook(drop_invalid_data)
+        """
         self.zo2_training_step_post_hooks.append(hook_fn)
 
     def zo2_training_step(self, model: nn.Module, inputs: Dict[str, Union[torch.Tensor, Any]]) -> torch.Tensor:

@@ -15,14 +15,14 @@ class MeZOSGDConfig:
     # zo2 config
     zo2: bool = True    # use offloading or not
     offloading_blocks: list = None  # specify offloading blocks or not
-    offloading_device: str = 'cpu'  # offload device, can be CPU or a file path (for disk offloading, but currently unavailable)
+    offloading_device: str = 'cpu'  # offload device, can be CPU or a path (for disk offloading, but currently unavailable)
     working_device: str = 'cuda'    # compute device, can be any CUDA device
     overlap: bool = True    # use scheduler to overlap or not
-    compute_module_optimize_method: str = ''   # '', 'torch.compile'
-    compute_function_optimize_method: str = ''   # '', 'torch.jit.script'
-    communicate_optimize_method: str = ''   # '', 'bucket'
+    compute_module_optimize_method: str = ''   # possible values are: ['', 'torch.compile']
+    compute_function_optimize_method: str = ''   # possible values are: ['', 'torch.jit.script']
+    communicate_optimize_method: str = ''   # possible values are: ['', 'bucket']
     amp: bool = False   # use amp or not
-    amp_precision: torch.dtype = torch.bfloat16 # amp autocast precision, valid when using amp
+    amp_precision: torch.dtype = torch.bfloat16 # amp autocast precision, possible values are: [torch.bfloat16, torch.float32], valid when using amp
     precision_on_offloading_device: torch.dtype = torch.float16 # precision on offloading device, valid when using amp
     precision_on_working_device: torch.dtype = torch.float32    # precision on working device, valid when using amp
     amp_compress_method: str = 'naive'  # currently only support naive amp compress, valid when using amp
