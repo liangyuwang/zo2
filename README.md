@@ -16,6 +16,8 @@ bash test/mezo_sgd/hf_opt/record_zo2_memory.sh
 
 ## 📰 News
 
+- 06/03/2025: We have open-sourced ZO2!
+
 ## 💡 Key Features
 
 - **Optimized ZO CPU Offloading**: ZO2 leverages `zeroth-order (ZO)` methods to efficiently use `CPU offloading`, avoiding redundant data transfers and significantly reducing GPU memory demands. This allows for handling large-scale models on hardware with limited GPU resources.
@@ -108,34 +110,30 @@ Please refer to [tutorial](./tutorial/).
 ## 🤖 Supported Models, ZO methods, and Tasks
 
 - **Models**:
-
   * [NanoGPT](https://github.com/karpathy/build-nanogpt/blob/master/train_gpt2.py)   (mainly for idea evaluation)
-  * [Transformers](https://github.com/huggingface/transformers):
-    * [OPT](https://arxiv.org/abs/2205.01068)
-- **ZO methods**:
+  * [Transformers](https://github.com/huggingface/transformers): [OPT](https://arxiv.org/abs/2205.01068)
 
+- **ZO methods**:
   * [MeZO-SGD](https://arxiv.org/abs/2305.17333)
+
 - **Tasks**: Please refer to [MeZO-Runner](example/mezo_runner/)
 
 ## 🧪 Test
 
 Please refer to [test](./test/).
 
-## 🧭 Future Directions
+## 🧭 Roadmap
 
-- [ ] Support more models
-
-  - [ ] HF LLaMA
-  - [ ] HF GPT
+- [ ] Support more models like LLaMA
 - [ ] Support more ZO methods
-- [ ] Support more offloading strategies
-
-  - [ ] Disk offloading
+- [ ] Support more offloading strategies (Disk offloading)
 
 ## 🚶 Contributing
+
+Feel free to submit issues and pull requests to improve the project!
 
 ## 📲 Contact
 
 * Liangyu Wang: liangyu.wang@kaust.edu.sa
 
-## 👥 Authors
+<!-- ## 👥 Authors -->
