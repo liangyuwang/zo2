@@ -16,7 +16,7 @@ bash test/mezo_sgd/hf_opt/record_zo2_memory.sh
 
 ## 📰 News
 
-<!-- - 06/03/2025: We have open-sourced ZO2! -->
+- 06/03/2025: We have open-sourced ZO2!
 
 ## 💡 Key Features
 
