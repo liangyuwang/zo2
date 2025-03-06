@@ -36,3 +36,10 @@ class BaseZOModel(torch.nn.Module):
 
     def register_zo_eval_loss_fn_post_hook(self, hook_fn):
         self.zo_eval_loss_fn_post_hooks.append(hook_fn)
+
+    def register_custom_opt(self, custom_opt_obj):
+        if hasattr(self, "opt"):
+            self.opt = custom_opt_obj
+        for module in self.children():
+            if hasattr(module, "opt"):
+                module.opt = custom_opt_obj
