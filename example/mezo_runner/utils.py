@@ -1,3 +1,6 @@
+# Copyright (c) 2025 liangyuwang
+# Licensed under the Apache License, Version 2.0
+
 """
 Modified from https://github.com/princeton-nlp/MeZO/blob/main/large_models/utils.py
 """

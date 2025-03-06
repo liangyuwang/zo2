@@ -1,3 +1,6 @@
+# Copyright (c) 2025 liangyuwang
+# Licensed under the Apache License, Version 2.0
+
 from . import zo, zo2
 from .....config.mezo_sgd import MeZOSGDConfig
 
