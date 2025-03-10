@@ -27,12 +27,22 @@ bash test/mezo_sgd/hf_opt/record_zo2_memory.sh
 
 ## ⚙️ Installation
 
-```shell
-git clone https://github.com/liangyuwang/zo2.git
-cd zo2/
-conda env create -f env.yaml
-conda activate zo2
-```
+* To experiment with our examples, tutorials, or tests, follow these steps to set up the ZO2 environment:
+  ```shell
+  git clone https://github.com/liangyuwang/zo2.git
+  cd zo2/
+  conda env create -f env.yaml
+  conda activate zo2
+  ```
+
+* Before installing the ZO2 package, ensure you have the required dependencies:
+
+  [PyTorch](https://pytorch.org/get-started/locally/) >= 2.4.0, CUDA >= 12.1
+
+  Once the dependencies are installed, you can install the ZO2 package using pip:
+  ```shell
+  pip install git+https://github.com/liangyuwang/zo2.git
+  ```
 
 ## 🛠️ Usage
 
@@ -46,7 +56,7 @@ export CUDA_VISIBLE_DEVICES=0
 MODEL=facebook/opt-2.7b TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 STEPS=20000 EVAL_STEPS=4000 bash mezo.sh
 ```
 
-### 2. Supervised Fine-Tuning HF Models with ZOTrainer / ZOSFTTrainer [[Trainer](./tutorial/huggingface.ipynb)]
+### 2. Fine-Tuning HF Models with ZOTrainer / ZOSFTTrainer [[Trainer](./tutorial/huggingface.ipynb)]
 
 ```python
 from zo2 import ZOConfig, zo_hf_init
