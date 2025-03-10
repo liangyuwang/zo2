@@ -42,6 +42,7 @@ We utilize the [OPT](https://arxiv.org/abs/2205.01068) models and [MeZO-SGD](htt
 
 ```shell
 cd example/mezo_runner/
+export CUDA_VISIBLE_DEVICES=0
 MODEL=facebook/opt-2.7b TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 STEPS=20000 EVAL_STEPS=4000 bash mezo.sh
 ```
 
@@ -137,3 +138,8 @@ Feel free to submit issues and pull requests to improve the project!
 * Liangyu Wang: liangyu.wang@kaust.edu.sa
 
 <!-- ## 👥 Authors -->
+
+<!-- ## 📖 BibTeX
+```
+
+``` -->
