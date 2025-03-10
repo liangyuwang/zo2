@@ -472,9 +472,9 @@ class MeZO2SGD(MeZOSGD):
             case "":
                 module = _upload_impl(module, device, offloading_device, *args, **kwargs)
             case "bucket":  # works on large-scale models
-                bucket, shapes = module_to_bucket_inplace(module)
+                bucket = module_to_bucket_inplace(module)
                 bucket = _upload_impl(bucket, device, offloading_device, *args, **kwargs)
-                module = bucket_to_module_inplace(bucket, module, shapes)
+                module = bucket_to_module_inplace(bucket, module)
             case _:
                 raise NotImplementedError
         if self.amp:    # after uploading, decompress the module to higher precision
@@ -515,9 +515,9 @@ class MeZO2SGD(MeZOSGD):
             case "":
                 module = _offload_impl(module, device, offloading_device, *args, **kwargs)
             case "bucket":  # works on large-scale models
-                bucket, shapes = module_to_bucket_inplace(module)
+                bucket = module_to_bucket_inplace(module)
                 bucket = _offload_impl(bucket, device, offloading_device, *args, **kwargs)
-                module = bucket_to_module_inplace(bucket, module, shapes)
+                module = bucket_to_module_inplace(bucket, module)
             case _:
                 raise NotImplementedError
         return module
