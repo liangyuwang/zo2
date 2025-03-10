@@ -97,8 +97,7 @@ for i in range(max_training_step):
     # Evaluate
     eval_input_ids, eval_labels = ...   # get eval data batch
     model.zo_eval()     
-    with torch.no_grad():
-        output = model(input_ids=eval_input_ids, labels=eval_labels)
+    output = model(input_ids=eval_input_ids, labels=eval_labels)
 
 # Final training update
 model.opt.zo_update(model)
