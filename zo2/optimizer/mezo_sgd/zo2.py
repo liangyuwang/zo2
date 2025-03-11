@@ -180,7 +180,7 @@ class MeZO2SGD(MeZOSGD):
         torch.cuda.synchronize()    # global sync to make sure all tasks finish
         loss1, loss2 = self.inner_zo_forward(*args, **kwargs)
         torch.cuda.synchronize()    # global sync to make sure all tasks finish
-        self.projected_grad = ((loss1 - loss2) / (self.zo_eps * 2)).item()
+        self.projected_grad = self.compute_grad(loss1, loss2)
         return loss1.detach()
     
     #*********************** tasks ***********************#

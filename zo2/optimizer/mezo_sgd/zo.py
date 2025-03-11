@@ -96,6 +96,9 @@ class MeZOSGD(BaseOptimizer):
         """
         return [first_perturb_shift, -stride, stride-first_perturb_shift]
 
+    def compute_grad(self, loss1, loss2):
+        return ((loss1 - loss2) / (2 * self.zo_eps)).item()
+        
     @torch.inference_mode
     def zo_forward(self, *args, zo_random_seed: int=None, **kwargs):
         """
@@ -113,7 +116,7 @@ class MeZOSGD(BaseOptimizer):
         torch.manual_seed(self.zo_random_seed)
         self.zo_perturb_parameters(self.model, scaling_factor=self.zo_perturb_shifts()[1])
         loss2 = self.inner_zo_forward(*args, **kwargs)
-        self.projected_grad = ((loss1 - loss2) / (2 * self.zo_eps)).item()
+        self.projected_grad = self.compute_grad(loss1, loss2)
         torch.manual_seed(self.zo_random_seed)
         self.zo_perturb_parameters(self.model, scaling_factor=self.zo_perturb_shifts()[2])
         torch.manual_seed(self.zo_random_seed)
