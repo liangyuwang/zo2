@@ -29,6 +29,8 @@ bash test/mezo_sgd/hf_opt/record_zo2_memory.sh
 
 ## ⚙️ Installation
 
+We offer two installation options, and you only need to use one of them to install ZO2:
+
 * To experiment with our examples, tutorials, or tests, follow these steps to set up the ZO2 environment:
   ```shell
   git clone https://github.com/liangyuwang/zo2.git
@@ -37,8 +39,10 @@ bash test/mezo_sgd/hf_opt/record_zo2_memory.sh
   conda activate zo2
   ```
 
-* Before installing the ZO2 package, ensure you have the required dependencies:
-
+* If you want to use ZO2 as a package in your own code, you can install it directly in your Python environment. 
+  
+  Before installing the ZO2 package, ensure you have the required dependencies: 
+  
   [PyTorch](https://pytorch.org/get-started/locally/) >= 2.4.0, CUDA >= 12.1
 
   Once the dependencies are installed, you can install the ZO2 package using pip:
