@@ -31,7 +31,7 @@ bash test/mezo_sgd/hf_opt/record_zo2_memory.sh
 
 We offer two installation options, and you only need to use one of them to install ZO2:
 
-* To experiment with our examples, tutorials, or tests, follow these steps to set up the ZO2 environment:
+1. To experiment with our examples, tutorials, or tests, follow these steps to set up the ZO2 environment:
   ```shell
   git clone https://github.com/liangyuwang/zo2.git
   cd zo2/
@@ -39,7 +39,7 @@ We offer two installation options, and you only need to use one of them to insta
   conda activate zo2
   ```
 
-* If you want to use ZO2 as a package in your own code, you can install it directly in your Python environment. 
+2. If you want to use ZO2 as a package in your own code, you can install it directly in your Python environment. 
   
   Before installing the ZO2 package, ensure you have the required dependencies: 
   
@@ -55,6 +55,8 @@ We offer two installation options, and you only need to use one of them to insta
 We utilize the [OPT](https://arxiv.org/abs/2205.01068) models and [MeZO-SGD](https://arxiv.org/abs/2305.17333) as examples. For additional information, please refer to the section on [Supported Models and ZO methods](#-supported-models-zo-methods-and-tasks-support).
 
 ### 1. Using [MeZO-Runner](example/mezo_runner/) to Evaluate Fine-tuning Tasks
+
+Before running the following commands, please ensure that you have cloned the entire project. If you [installed](#️installation) ZO2 using option 2, you will need to run "git clone https://github.com/liangyuwang/zo2.git" to obtain the complete project, then navigate to the zo2 folder by "cd zo2".
 
 ```shell
 cd example/mezo_runner/
