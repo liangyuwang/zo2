@@ -66,7 +66,8 @@ MODEL=facebook/opt-2.7b TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 STEPS=20000 EVAL_STEP
 
 ```python
 from zo2 import ZOConfig, zo_hf_init
-from zo2.hf_trl import ZOTrainer, ZOSFTTrainer
+from zo2.trainer.hf_transformers import ZOTrainer
+from zo2.trainer.hf_trl import ZOSFTTrainer
 from transformers import TrainingArguments
 
 # Model and optimizer init
@@ -78,14 +79,13 @@ with zo_hf_init(zo_config):
 
 training_args = TrainingArguments("test-trainer")
 
-trainer = ZOSFTTrainer(  # or ZOTrainer
+trainer = ZOTrainer(  # or ZOSFTTrainer
     model,
     args = training_args,
     train_dataset=...,   # get training dataset
     eval_dataset=...,    # get eval dataset
     data_collator=...,   # get data_collator
     tokenizer=...,       # use suitable tokenizer
-    compute_metrics=..., # define compute_metrics func,
     ...
 )
 
