@@ -32,23 +32,25 @@ bash test/mezo_sgd/hf_opt/record_zo2_memory.sh
 We offer two installation options, and you only need to use one of them to install ZO2:
 
 1. To experiment with our examples, tutorials, or tests, follow these steps to set up the ZO2 environment:
-  ```shell
+
+```shell
   git clone https://github.com/liangyuwang/zo2.git
   cd zo2/
   conda env create -f env.yml
   conda activate zo2
-  ```
+```
 
-2. If you want to use ZO2 as a package in your own code, you can install it directly in your Python environment. 
-  
-  Before installing the ZO2 package, ensure you have the required dependencies: 
-  
+2. If you want to use ZO2 as a package in your own code, you can install it directly in your Python environment.
+
+  Before installing the ZO2 package, ensure you have the required dependencies:
+
   [PyTorch](https://pytorch.org/get-started/locally/) >= 2.4.0, CUDA >= 12.1
 
   Once the dependencies are installed, you can install the ZO2 package using pip:
-  ```shell
+
+```shell
   pip install git+https://github.com/liangyuwang/zo2.git
-  ```
+```
 
 ## 🛠️ Usage
 
@@ -116,9 +118,6 @@ for i in range(max_training_step):
     eval_input_ids, eval_labels = ...   # get eval data batch
     model.zo_eval()     
     output = model(input_ids=eval_input_ids, labels=eval_labels)
-
-# Final training update
-model.opt.zo_update(model)
 ```
 
 ## ✨ Tutorial
@@ -128,12 +127,12 @@ Please refer to [tutorial](./tutorial/).
 ## 🤖 Supported Models, ZO methods, and Tasks
 
 - **Models**:
+
   * [NanoGPT](https://github.com/karpathy/build-nanogpt/blob/master/train_gpt2.py)   (mainly for idea evaluation)
   * [Transformers](https://github.com/huggingface/transformers): [OPT](https://arxiv.org/abs/2205.01068)
-
 - **ZO methods**:
-  * [MeZO-SGD](https://arxiv.org/abs/2305.17333)
 
+  * [MeZO-SGD](https://arxiv.org/abs/2305.17333)
 - **Tasks**: Please refer to [MeZO-Runner](example/mezo_runner/)
 
 ## 🧪 Test
@@ -155,6 +154,7 @@ Feel free to submit issues and pull requests to improve the project!
 * Liangyu Wang: liangyu.wang@kaust.edu.sa
 
 ## 📖 BibTeX
+
 ```
 @misc{wang2025zo2scalablezerothorderfinetuning,
       title={ZO2: Scalable Zeroth-Order Fine-Tuning for Extremely Large Language Models with Limited GPU Memory}, 
