@@ -1,5 +1,7 @@
 # ZO2 (Zeroth-Order Offloading): Full Parameter Fine-Tuning 175B LLMs with 18GB GPU Memory
 
+📝 [arxiv](https://arxiv.org/abs/2503.12668)
+
 👋 Welcome! **ZO2** is an innovative framework specifically designed to enhance the fine-tuning of large language models (LLMs) using **zeroth-order (ZO)** optimization techniques and advanced **offloading** technologies. This framework is particularly tailored for setups with limited GPU memory (e.g. fine-tune **[OPT-175B](https://arxiv.org/abs/2205.01068)** with just **18GB GPU memory**), enabling the fine-tuning of models that were previously unmanageable due to hardware constraints.
 
 - The table below displays the GPU memory usage for various OPT model sizes when fine-tuned using the ZO2 framework:
@@ -134,7 +136,7 @@ Please refer to [test](./test/).
 
 ## 🧭 Roadmap
 
-- [ ] Support more models like LLaMA
+- [ ] Support more models like LLaMA, DeepSeek, and Qwen
 - [ ] Support more ZO methods
 - [ ] Support more offloading strategies (Disk offloading)
 
@@ -146,9 +148,15 @@ Feel free to submit issues and pull requests to improve the project!
 
 * Liangyu Wang: liangyu.wang@kaust.edu.sa
 
-<!-- ## 👥 Authors -->
-
-<!-- ## 📖 BibTeX
+## 📖 BibTeX
 ```
-
-``` -->
+@misc{wang2025zo2scalablezerothorderfinetuning,
+      title={ZO2: Scalable Zeroth-Order Fine-Tuning for Extremely Large Language Models with Limited GPU Memory}, 
+      author={Liangyu Wang and Jie Ren and Hang Xu and Junxiao Wang and Huanyi Xie and David E. Keyes and Di Wang},
+      year={2025},
+      eprint={2503.12668},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2503.12668}, 
+}
+```
