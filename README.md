@@ -35,7 +35,7 @@ We offer two installation options, and you only need to use one of them to insta
   ```shell
   git clone https://github.com/liangyuwang/zo2.git
   cd zo2/
-  conda env create -f env.yaml
+  conda env create -f env.yml
   conda activate zo2
   ```
 
