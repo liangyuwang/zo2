@@ -1,10 +1,10 @@
 # ZO2 (Zeroth-Order Offloading): Full Parameter Fine-Tuning 175B LLMs with 18GB GPU Memory
 
 [![arXiv](https://img.shields.io/badge/Arxiv-2503.12668-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2503.12668)
+[![License](https://img.shields.io/badge/License-Apache%202.0-yellow)](https://github.com/liangyuwang/zo2/blob/main/LICENSE)
 <!-- <a target="_blank" href="https://colab.research.google.com/github/liangyuwang/zo2/blob/main/tutorial/colab.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a> -->
-[![License](https://img.shields.io/badge/License-Apache%202.0-yellow)](https://github.com/liangyuwang/zo2/blob/main/LICENSE)
 
 👋 Welcome! **ZO2** is an innovative framework specifically designed to enhance the fine-tuning of large language models (LLMs) using **zeroth-order (ZO)** optimization techniques and advanced **offloading** technologies. This framework is particularly tailored for setups with limited GPU memory (e.g. fine-tune **[OPT-175B](https://arxiv.org/abs/2205.01068)** with just **18GB GPU memory**), enabling the fine-tuning of models that were previously unmanageable due to hardware constraints.
 
