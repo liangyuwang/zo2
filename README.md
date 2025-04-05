@@ -2,6 +2,7 @@
 
 [![arXiv](https://img.shields.io/badge/Arxiv-2503.12668-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2503.12668)
 [![License](https://img.shields.io/badge/License-Apache%202.0-yellow)](https://github.com/liangyuwang/zo2/blob/main/LICENSE)
+[![GitDiagran](https://img.shields.io/badge/Git-Diagram%20-blue)](https://gitdiagram.com/liangyuwang/zo2)
 <!-- <a target="_blank" href="https://colab.research.google.com/github/liangyuwang/zo2/blob/main/tutorial/colab.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a> -->
