@@ -18,7 +18,7 @@
 - [Install](#️installation) the package and execute the following test to see the memory usage:
 
 ```shell
-bash test/mezo_sgd/hf_opt/record_zo2_memory.sh
+  bash test/mezo_sgd/hf_opt/record_zo2_memory.sh
 ```
 
 ## 📰 News
@@ -47,11 +47,11 @@ We offer two installation options, and you only need to use one of them to insta
 
 2. If you want to use ZO2 as a package in your own code, you can install it directly in your Python environment.
 
-  Before installing the ZO2 package, ensure you have the required dependencies:
+    Before installing the ZO2 package, ensure you have the required dependencies:
 
-  [PyTorch](https://pytorch.org/get-started/locally/) >= 2.4.0, CUDA >= 12.1
+    - [PyTorch](https://pytorch.org/get-started/locally/) >= 2.4.0, CUDA >= 12.1
 
-  Once the dependencies are installed, you can install the ZO2 package using pip:
+    Once the dependencies are installed, you can install the ZO2 package using pip:
 
 ```shell
   pip install git+https://github.com/liangyuwang/zo2.git
