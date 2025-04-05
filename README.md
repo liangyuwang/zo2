@@ -161,13 +161,10 @@ Feel free to submit issues and pull requests to improve the project!
 ## 📖 BibTeX
 
 ```
-@misc{wang2025zo2scalablezerothorderfinetuning,
-      title={ZO2: Scalable Zeroth-Order Fine-Tuning for Extremely Large Language Models with Limited GPU Memory}, 
-      author={Liangyu Wang and Jie Ren and Hang Xu and Junxiao Wang and Huanyi Xie and David E. Keyes and Di Wang},
-      year={2025},
-      eprint={2503.12668},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2503.12668}, 
+@article{wang2025zo2,
+  title={ZO2: Scalable Zeroth-Order Fine-Tuning for Extremely Large Language Models with Limited GPU Memory},
+  author={Wang, Liangyu and Ren, Jie and Xu, Hang and Wang, Junxiao and Xie, Huanyi and Keyes, David E and Wang, Di},
+  journal={arXiv preprint arXiv:2503.12668},
+  year={2025}
 }
 ```
