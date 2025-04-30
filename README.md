@@ -24,8 +24,8 @@
 
 ## 📰 News
 
-- 06/03/2025: We have open-sourced ZO2!
 - 01/05/2025: We upgraded the environment and dependencies to align with the latest `transformers==4.51.3`. This ensures compatibility with recent Hugging Face features and improved model support.
+- 06/03/2025: We have open-sourced ZO2!
 
 ## 💡 Key Features
 
