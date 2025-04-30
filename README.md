@@ -24,6 +24,7 @@
 ## 📰 News
 
 - 06/03/2025: We have open-sourced ZO2!
+- 01/05/2025: We upgraded the environment and dependencies to align with the latest `transformers==4.51.3`. This ensures compatibility with recent Hugging Face features and improved model support.
 
 ## 💡 Key Features
 
@@ -76,7 +77,6 @@ MODEL=facebook/opt-2.7b TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 STEPS=20000 EVAL_STEP
 ```python
 from zo2 import ZOConfig, zo_hf_init
 from zo2.trainer.hf_transformers import ZOTrainer
-from zo2.trainer.hf_trl import ZOSFTTrainer
 from transformers import TrainingArguments
 
 # Model and optimizer init
@@ -88,7 +88,7 @@ with zo_hf_init(zo_config):
 
 training_args = TrainingArguments("test-trainer")
 
-trainer = ZOTrainer(  # or ZOSFTTrainer
+trainer = ZOTrainer(
     model,
     args = training_args,
     train_dataset=...,   # get training dataset

@@ -466,7 +466,7 @@ class Framework:
             args=self.args,
             train_dataset=train_dataset, 
             eval_dataset=eval_dataset,
-            tokenizer=self.tokenizer,
+            processing_class=self.tokenizer,
             data_collator=DataCollatorWithPaddingAndNesting(self.tokenizer, pad_to_multiple_of=8) if self.args.train_as_classification else collator(self.tokenizer, pad_to_multiple_of=8),
         )
         if self.args.save_on_interrupt:

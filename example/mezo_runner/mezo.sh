@@ -58,7 +58,7 @@ python run.py \
     --max_steps $STEPS \
     --trainer zo --load_float16 \
     --learning_rate $LR --zo_eps $EPS --per_device_train_batch_size $BS --lr_scheduler_type "constant" \
-    --load_best_model_at_end --evaluation_strategy steps --save_strategy steps --save_total_limit 1 \
+    --load_best_model_at_end --eval_strategy steps --save_strategy steps --save_total_limit 1 \
     --eval_steps $EVAL_STEPS --save_steps $EVAL_STEPS \
     --train_as_classification \
     $EXTRA_ARGS \

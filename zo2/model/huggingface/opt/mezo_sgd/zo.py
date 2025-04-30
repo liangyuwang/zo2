@@ -66,7 +66,7 @@ class OPTDecoder(modeling_opt.OPTDecoder, OPTPreTrainedModel):
         else:
             self.project_in = None
 
-        self.layers = nn.ModuleList([OPTDecoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([OPTDecoderLayer(config, layer_idx) for layer_idx in range(config.num_hidden_layers)])
 
         # Note that the only purpose of `config._remove_final_layer_norm` is to keep backward compatibility
         # with checkpoints that have been fine-tuned before transformers v4.20.1
@@ -126,6 +126,8 @@ class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel, BaseZOMode
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        cache_position: Optional[torch.Tensor] = None,
         **kwargs
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
@@ -206,12 +208,14 @@ class OPTForCausalLM(modeling_opt.OPTForCausalLM, OPTPreTrainedModel, BaseZOMode
             return self.opt.zo_forward(
                 input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, labels, use_cache, 
-                output_attentions, output_hidden_states, return_dict, **kwargs)
+                output_attentions, output_hidden_states, return_dict, 
+                position_ids, cache_position, **kwargs)
         else:
             return self.opt.zo_eval_forward(super().forward, 
                 input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, labels, use_cache, 
-                output_attentions, output_hidden_states, return_dict, **kwargs)
+                output_attentions, output_hidden_states, return_dict, 
+                position_ids, cache_position, **kwargs)
 
 
 class OPTForSequenceClassification(modeling_opt.OPTForSequenceClassification, OPTPreTrainedModel, BaseZOModel):
@@ -366,6 +370,8 @@ class OptimizerOPTForCausalLM(MeZOSGD):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        cache_position: Optional[torch.Tensor] = None,
         **kwargs
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         """
@@ -389,6 +395,8 @@ class OptimizerOPTForCausalLM(MeZOSGD):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            position_ids=position_ids,
+            cache_position=cache_position,
         )
 
         logits = self.model.lm_head(outputs[0]).contiguous()
@@ -429,6 +437,8 @@ class OptimizerOPTForCausalLM(MeZOSGD):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        cache_position: Optional[torch.Tensor] = None,
         **kwargs
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         if self.model.zo_eval_loss_fn_pre_hooks != []:
@@ -456,7 +466,8 @@ class OptimizerOPTForCausalLM(MeZOSGD):
         else:
             output = eval_fn(input_ids, attention_mask, head_mask, 
                 past_key_values, inputs_embeds, labels, use_cache, 
-                output_attentions, output_hidden_states, return_dict)
+                output_attentions, output_hidden_states, return_dict,
+                position_ids, cache_position)
         
         if self.model.zo_eval_loss_fn_post_hooks != []:
             for post_hook_fn in self.model.zo_eval_loss_fn_post_hooks:
