@@ -426,11 +426,16 @@ class OptimizerQwen3ForCausalLM(MeZO2SGD):
         
         if labels is not None:
             # loss = self.loss_function(logits=logits, labels=labels, vocab_size=self.config.vocab_size, **kwargs)
-            loss1, loss2 = self.task_compute_function(
-                self.model.loss_function,
-                inputs1={"logits": logits1, "labels": labels, "vocab_size": self.model.config.vocab_size, **kwargs},
-                inputs2={"logits": logits2, "labels": labels, "vocab_size": self.model.config.vocab_size, **kwargs},
-            )
+            if self.model.zo_custom_train_loss_fn:
+                loss1, loss2 = self.task_compute_function(self.model.zo_custom_train_loss_fn,
+                    inputs1={"self": self.model, "input_ids": input_ids, "logits": logits1, "labels": labels, **kwargs},
+                    inputs2={"self": self.model, "input_ids": input_ids, "logits": logits2, "labels": labels, **kwargs})
+            else:
+                loss1, loss2 = self.task_compute_function(
+                    self.model.loss_function,
+                    inputs1={"logits": logits1, "labels": labels, "vocab_size": self.model.config.vocab_size, **kwargs},
+                    inputs2={"logits": logits2, "labels": labels, "vocab_size": self.model.config.vocab_size, **kwargs},
+                )
 
         if self.model.zo_train_loss_fn_post_hooks != []:
             for post_hook_fn in self.model.zo_train_loss_fn_post_hooks:
