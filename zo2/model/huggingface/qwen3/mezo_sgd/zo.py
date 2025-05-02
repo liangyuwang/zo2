@@ -191,17 +191,20 @@ class OptimizerQwen3ForCausalLM(MeZOSGD):
         slice_indices = slice(-logits_to_keep, None) if isinstance(logits_to_keep, int) else logits_to_keep
         logits = self.model.lm_head(hidden_states[:, slice_indices, :])
 
+        if self.model.zo_train_loss_fn_pre_hooks != []:
+            for pre_hook_fn in self.model.zo_train_loss_fn_pre_hooks:
+                input_ids, logits, labels = pre_hook_fn(self.model, input_ids, logits, labels)
+
         loss = None
         if labels is not None:
-            loss = self.model.loss_function(logits=logits, labels=labels, vocab_size=self.model.config.vocab_size, **kwargs)
+            if self.model.zo_custom_train_loss_fn:
+                loss = self.model.zo_custom_train_loss_fn(self.model, input_ids, logits, labels, **kwargs)
+            else:
+                loss = self.model.loss_function(logits=logits, labels=labels, vocab_size=self.model.config.vocab_size, **kwargs)
 
-        # return CausalLMOutputWithPast(
-        #     loss=loss,
-        #     logits=logits,
-        #     past_key_values=outputs.past_key_values,
-        #     hidden_states=outputs.hidden_states,
-        #     attentions=outputs.attentions,
-        # )
+        if self.model.zo_train_loss_fn_post_hooks != []:
+            for post_hook_fn in self.model.zo_train_loss_fn_post_hooks:
+                loss, input_ids, logits, labels = post_hook_fn(self.model, loss, input_ids, logits, labels)
 
         # add --> only return loss
         return loss.detach()
