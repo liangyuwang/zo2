@@ -203,14 +203,24 @@ class Framework:
             )
             # Initialize model within zo_hf_init context
             with zo_hf_init(self.zo_config):
-                from transformers import OPTForCausalLM
-                model = OPTForCausalLM.from_pretrained(
-                    self.args.model_name, 
-                    config=config,
-                    torch_dtype=torch_dtype,
-                    max_memory={i: f'{free_in_GB-5}GB' for i in range(torch.cuda.device_count())},
-                    load_in_8bit=self.args.load_int8,
-                )
+                if "opt" in self.args.model_name:
+                    from transformers import OPTForCausalLM
+                    model = OPTForCausalLM.from_pretrained(
+                        self.args.model_name, 
+                        config=config,
+                        torch_dtype=torch_dtype,
+                        max_memory={i: f'{free_in_GB-5}GB' for i in range(torch.cuda.device_count())},
+                        load_in_8bit=self.args.load_int8,
+                    )
+                elif "Qwen3" in self.args.model_name:
+                    from transformers import Qwen3ForCausalLM
+                    model = Qwen3ForCausalLM.from_pretrained(
+                        self.args.model_name,
+                        config=config,
+                        torch_dtype=torch_dtype,
+                        max_memory={i: f'{free_in_GB-5}GB' for i in range(torch.cuda.device_count())},
+                        load_in_8bit=self.args.load_int8,
+                    )
                 model.zo_init(self.zo_config)
             logger.info(f"Check if zo2 init correctly: {hasattr(model, 'zo_training')}")
             # If using a method other than zo2, move model to working device
@@ -229,6 +239,10 @@ class Framework:
         if "llama" in self.args.model_name:
             # LLaMA padding token
             tokenizer.pad_token_id = 0 # technically <unk>
+
+        if "Qwen3" in self.args.model_name:
+            # LLaMA padding token
+            tokenizer.add_bos_token = False
 
         # Prefix tuning/LoRA
         if self.args.prefix_tuning:

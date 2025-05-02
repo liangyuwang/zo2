@@ -27,9 +27,13 @@ Please read [run.py](./run.py) for a complete list of arguments. We introduce so
 
 Example:
 
+1. MeZO (full-parameter fine-tuning)
 ```bash
-# MeZO (full-parameter fine-tuning)
+# You can adjust the following model size and other hyperparameters.
+# OPT-2.7B
 MODEL=facebook/opt-2.7b TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 STEPS=20000 EVAL_STEPS=4000 bash mezo.sh
+# Qwen3-1.7B
+MODEL=Qwen/Qwen3-1.7B TASK=SST2 MODE=ft LR=1e-7 EPS=1e-3 STEPS=20000 EVAL_STEPS=4000 bash mezo.sh
 ```
 
 ## Supported Tasks (See [tasks.py](./tasks.py))

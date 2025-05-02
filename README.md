@@ -24,6 +24,7 @@
 
 ## 📰 News
 
+- 02/05/2025: Added support for [Qwen3](https://qwenlm.github.io/blog/qwen3/). You can now fully fine-tune the [32B version](https://huggingface.co/Qwen/Qwen3-32B-FP8) with just 6GB GPU memory using ZO2. Please refer to our [example](example/mezo_runner/).
 - 01/05/2025: We upgraded the environment and dependencies to align with the latest `transformers==4.51.3`. 
 - 06/03/2025: We have open-sourced ZO2!
 
