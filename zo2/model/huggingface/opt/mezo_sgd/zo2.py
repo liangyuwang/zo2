@@ -663,6 +663,8 @@ class OptimizerOPTDecoder(MeZO2SGD):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        cache_position: Optional[torch.Tensor] = None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.model.config.output_attentions
         output_hidden_states = (
@@ -694,17 +696,23 @@ class OptimizerOPTDecoder(MeZO2SGD):
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
         # required mask seq length can be calculated via length of past
         mask_seq_length = past_key_values_length + seq_length
+        
+        past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
+        if cache_position is None:
+            cache_position = torch.arange(
+                past_seen_tokens, past_seen_tokens + inputs_embeds.shape[1], device=inputs_embeds.device
+            )
 
         # embed positions
         if attention_mask is None:
             attention_mask = torch.ones(batch_size, mask_seq_length, device=inputs_embeds.device)
-        # causal_attention_mask = self.model._prepare_decoder_attention_mask(
-        #     attention_mask, input_shape, inputs_embeds, past_key_values_length
+        # causal_mask = self.model._update_causal_mask(
+        #     attention_mask, inputs_embeds, cache_position, past_key_values, output_attentions
         # )
         causal_attention_mask = self.task_compute_function(
-            self.model._prepare_decoder_attention_mask,
-            inputs1={"attention_mask": attention_mask, "input_shape": input_shape, 
-                     "inputs_embeds": inputs_embeds, "past_key_values_length": past_key_values_length},
+            self.model._update_causal_mask,
+            inputs1={"attention_mask": attention_mask, "input_tensor": inputs_embeds, "cache_position": cache_position, 
+                     "past_key_values": past_key_values, "output_attentions": output_attentions},
             inputs2=None
         )
         # pos_embeds = self.model.embed_positions(attention_mask, past_key_values_length)
