@@ -657,7 +657,7 @@ class OptimizerQwen3ForCausalLM(MeZO2SGD):
             else:
                 loss = self.task_compute_function(
                     self.model.loss_function,
-                    inputs1=([self.model], {"logits": logits, "labels": labels, "vocab_size": self.model.config.vocab_size, **kwargs}),
+                    inputs1={"logits": logits, "labels": labels, "vocab_size": self.model.config.vocab_size, **kwargs},
                     inputs2=None
                 )
 
