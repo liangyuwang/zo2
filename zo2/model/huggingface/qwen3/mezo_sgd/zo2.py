@@ -361,6 +361,150 @@ class OptimizerQwen3Model(MeZO2SGD):
 
         return hidden_states1, hidden_states2
 
+    @torch.inference_mode
+    def inner_zo_eval_forward(
+        self,
+        input_ids: Optional[torch.LongTensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_values: Optional[Cache] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        cache_position: Optional[torch.LongTensor] = None,
+        **flash_attn_kwargs: Unpack[FlashAttentionKwargs],
+    ) -> BaseModelOutputWithPast:
+        output_attentions = output_attentions if output_attentions is not None else self.model.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.model.config.output_hidden_states
+        )
+        # use_cache = use_cache if use_cache is not None else self.model.config.use_cache
+        use_cache = False
+        
+        if (input_ids is None) ^ (inputs_embeds is not None):
+            raise ValueError("You must specify exactly one of input_ids or inputs_embeds")
+
+        if self.model.gradient_checkpointing and self.model.training and use_cache:
+            logger.warning_once(
+                "`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`."
+            )
+            use_cache = False
+
+        # TODO (joao): remove this exception in v4.56 -- it exists for users that try to pass a legacy cache
+        if not isinstance(past_key_values, (type(None), Cache)):
+            raise ValueError("The `past_key_values` should be either a `Cache` object or `None`.")
+
+        if inputs_embeds is None:
+            # inputs_embeds = self.model.embed_tokens(input_ids)
+            inputs_embeds = self.task_compute_module(
+                self.model.embed_tokens,
+                inputs1={"input": input_ids},
+                inputs2=None,
+                grad=None
+            )
+
+        if use_cache and past_key_values is None:
+            past_key_values = DynamicCache()
+
+        if cache_position is None:
+            past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
+            cache_position = torch.arange(
+                past_seen_tokens, past_seen_tokens + inputs_embeds.shape[1], device=inputs_embeds.device
+            )
+
+        if position_ids is None:
+            position_ids = cache_position.unsqueeze(0)
+
+        causal_mask = self.task_compute_function(
+            self.model._update_causal_mask,
+            inputs1={"attention_mask": attention_mask, "input_tensor": inputs_embeds, "cache_position": cache_position, "past_key_values": past_key_values, "output_attentions": output_attentions},
+            inputs2=None,
+            compute_sync=False,
+        )
+
+        hidden_states = inputs_embeds
+
+        # create position embeddings to be shared across the decoder layers
+        position_embeddings = self.task_compute_module(
+            self.model.rotary_emb,
+            inputs1={"x": hidden_states, "position_ids": position_ids},
+            inputs2=None,
+            grad=None,
+            compute_sync=False
+        )
+
+        if 0 in self.offloading_blocks:
+            self.model.layers[0] = self.task_upload(
+                module=self.model.layers[0],
+                device=self.device
+            )
+
+        N = self.model.config.num_hidden_layers
+        for i in range(1, N):
+
+            if i != 1:
+                if i-2 in self.offloading_blocks:
+                    self.model.layers[i-2] = self.task_offload(
+                        module=self.model.layers[i-2],
+                        device=self.offloading_device)
+            
+            layer_outputs = self.task_compute_module(
+                self.model.layers[i-1],
+                inputs1={"hidden_states": hidden_states, "attention_mask": causal_mask, "position_ids": position_ids, 
+                         "past_key_value": past_key_values, "output_attentions": output_attentions, "use_cache": use_cache, 
+                         "cache_position": cache_position, "position_embeddings": position_embeddings, **flash_attn_kwargs},
+                inputs2=None,
+                grad=None
+            )
+
+            hidden_states = self.task_compute_function(
+                fn=fn_get_qwen3_decoder_hidden_states_from_layer_outputs,
+                inputs1={"input": layer_outputs},
+                inputs2=None,
+                compute_sync=False
+            )
+
+            if i in self.offloading_blocks:
+                self.model.layers[i] = self.task_upload(
+                    module=self.model.layers[i],
+                    device=self.device)
+
+        if N-2 in self.offloading_blocks:
+            self.model.layers[N-2] = self.task_offload(
+                module=self.model.layers[N-2],
+                device=self.offloading_device)
+        
+        layer_outputs = self.task_compute_module(
+            self.model.layers[N-1],
+            inputs1={"hidden_states": hidden_states, "attention_mask": causal_mask, "position_ids": position_ids,
+                      "past_key_value": past_key_values, "output_attentions": output_attentions, "use_cache": use_cache,
+                      "cache_position": cache_position, "position_embeddings": position_embeddings, **flash_attn_kwargs},
+            inputs2=None,
+            grad=None
+        )
+
+        hidden_states = self.task_compute_function(
+            fn=fn_get_qwen3_decoder_hidden_states_from_layer_outputs,
+            inputs1={"input": layer_outputs},
+            inputs2=None,
+            compute_sync=False
+        )
+
+        if N-1 in self.offloading_blocks:
+            self.model.layers[N-1] = self.task_offload(
+                module=self.model.layers[N-1],
+                device=self.offloading_device)
+
+        hidden_states = self.task_compute_module(
+            module=self.model.norm,
+            inputs1={"hidden_states": hidden_states},
+            inputs2=None,
+            grad=None,
+            # weight_decay=0.
+        )
+        
+        return hidden_states
 
 class OptimizerQwen3ForCausalLM(MeZO2SGD):
 
@@ -445,3 +589,89 @@ class OptimizerQwen3ForCausalLM(MeZO2SGD):
                         inputs2={"self": self.model, "loss": loss2, "input_ids": input_ids, "logits": logits2, "labels": labels})
 
         return loss1, loss2
+
+    @torch.inference_mode
+    def inner_zo_eval_forward(
+        self,
+        input_ids: Optional[torch.LongTensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_values: Optional[Cache] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        cache_position: Optional[torch.LongTensor] = None,
+        logits_to_keep: Union[int, torch.Tensor] = 0,
+        **kwargs: Unpack[KwargsForCausalLM],
+    ) -> CausalLMOutputWithPast:
+        output_attentions = output_attentions if output_attentions is not None else self.model.config.output_attentions
+        output_hidden_states = (
+            output_hidden_states if output_hidden_states is not None else self.model.config.output_hidden_states
+        )
+
+        # decoder outputs consists of (dec_features, layer_state, dec_hidden, dec_attn)
+        self.model.model.zo_training = False
+        self.assign_zo2_attributes(self, self.model.model.opt)
+        hidden_states = self.model.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_values=past_key_values,
+            inputs_embeds=inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            cache_position=cache_position,
+            **kwargs,
+        )
+        self.assign_zo2_attributes(self.model.model.opt, self)
+
+        # Only compute necessary logits, and do not upcast them to float if we are not computing the loss
+        slice_indices = slice(-logits_to_keep, None) if isinstance(logits_to_keep, int) else logits_to_keep
+
+        hidden_states = self.task_compute_function(
+            fn_get_qwen3_sliced_logits_from_hidden_states,
+            inputs1={"hidden_states": hidden_states, "slice_indices": slice_indices},
+            inputs2=None,
+        )
+        logits = self.task_compute_module(self.model.lm_head,
+                                        inputs1={"input": hidden_states},
+                                        inputs2=None,
+                                        grad=None)
+
+        if self.model.zo_eval_loss_fn_pre_hooks != []:
+            for pre_hook_fn in self.model.zo_eval_loss_fn_pre_hooks:
+                input_ids, logits, labels = \
+                    self.task_compute_function(pre_hook_fn,
+                        inputs1=([self.model], {"input_ids": input_ids, "logits": logits, "labels": labels}),
+                        inputs2=None)
+        
+        if labels is not None:
+            # loss = self.loss_function(logits=logits, labels=labels, vocab_size=self.config.vocab_size, **kwargs)
+            if self.model.zo_custom_eval_loss_fn:
+                loss = self.task_compute_function(self.model.zo_custom_eval_loss_fn,
+                    inputs1=([self.model], {"input_ids": input_ids, "logits": logits, "labels": labels, **kwargs}),
+                    inputs2=None)
+            else:
+                loss = self.task_compute_function(
+                    self.model.loss_function,
+                    inputs1=([self.model], {"logits": logits, "labels": labels, "vocab_size": self.model.config.vocab_size, **kwargs}),
+                    inputs2=None
+                )
+
+        if self.model.zo_eval_loss_fn_post_hooks != []:
+            for post_hook_fn in self.model.zo_eval_loss_fn_post_hooks:
+                loss, input_ids, logits, labels = \
+                    self.task_compute_function(post_hook_fn,
+                        inputs1=([self.model], {"loss": loss, "input_ids": input_ids, "logits": logits, "labels": labels}),
+                        inputs2=None)
+
+        return CausalLMOutputWithPast(
+            loss=loss,
+            logits=logits,
+            past_key_values=None,
+            hidden_states=None,
+            attentions=None,
+        )

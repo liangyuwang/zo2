@@ -208,3 +208,51 @@ class OptimizerQwen3ForCausalLM(MeZOSGD):
 
         # add --> only return loss
         return loss.detach()
+
+    @torch.inference_mode
+    def inner_zo_eval_forward(
+        self,
+        eval_fn,
+        input_ids: Optional[torch.LongTensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        position_ids: Optional[torch.LongTensor] = None,
+        past_key_values: Optional[Cache] = None,
+        inputs_embeds: Optional[torch.FloatTensor] = None,
+        labels: Optional[torch.LongTensor] = None,
+        use_cache: Optional[bool] = None,
+        output_attentions: Optional[bool] = None,
+        output_hidden_states: Optional[bool] = None,
+        cache_position: Optional[torch.LongTensor] = None,
+        logits_to_keep: Union[int, torch.Tensor] = 0,
+        **kwargs: Unpack[KwargsForCausalLM],
+    ) -> CausalLMOutputWithPast:
+        if self.model.zo_eval_loss_fn_pre_hooks != []:
+            for pre_hook_fn in self.model.zo_eval_loss_fn_pre_hooks:
+                input_ids, logits, labels = pre_hook_fn(self.model, input_ids, logits, labels)
+
+        if self.model.zo_custom_eval_loss_fn:
+            output = eval_fn(input_ids, attention_mask, position_ids, 
+                past_key_values, inputs_embeds, None, use_cache, 
+                output_attentions, output_hidden_states, 
+                cache_position, logits_to_keep, **kwargs)
+            logits = output["logits"]
+            loss = None
+            if labels is not None:
+                loss = self.model.zo_custom_eval_loss_fn(self.model, input_ids, logits, labels, **kwargs)
+            output = CausalLMOutputWithPast(
+                loss=loss,
+                logits=logits,
+                past_key_values=output.past_key_values,
+                hidden_states=output.hidden_states,
+                attentions=output.attentions,
+            )
+        else:
+            output = eval_fn(input_ids, attention_mask, position_ids, 
+                past_key_values, inputs_embeds, labels, use_cache, 
+                output_attentions, output_hidden_states, 
+                cache_position, logits_to_keep, **kwargs)
+            
+        if self.model.zo_eval_loss_fn_post_hooks != []:
+            for post_hook_fn in self.model.zo_eval_loss_fn_post_hooks:
+                output, input_ids, logits, labels = post_hook_fn(self.model, output, input_ids, logits, labels)
+        return output
