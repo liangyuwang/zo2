@@ -148,7 +148,7 @@ Please refer to [test](./test/).
 
 ## 🧭 Roadmap
 
-- [ ] Support more models like LLaMA, DeepSeek, and Qwen
+- [ ] Support more models like LLaMA and DeepSeek
 - [ ] Support more ZO methods
 - [ ] Support more offloading strategies (Disk offloading)
 

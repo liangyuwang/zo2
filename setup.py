@@ -5,7 +5,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='zo2',
-    version='0.0.1',
+    version='0.1.1',
     author='liangyuwang',
     author_email='liangyu.wang@kaust.edu.sa',
     description='ZO2 (Zeroth-Order Offloading), a framework for full parameter fine-tuning 175B LLMs with 18GB GPU memory',
