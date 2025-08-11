@@ -63,7 +63,7 @@ We offer two installation options, and you only need to use one of them to insta
 
 ## 🛠️ Usage
 
-We utilize the [OPT](https://arxiv.org/abs/2205.01068) models and [MeZO-SGD](https://arxiv.org/abs/2305.17333) as examples. For additional information, please refer to the section on [Supported Models and ZO methods](#-supported-models-zo-methods-and-tasks-support).
+We utilize the [OPT](https://arxiv.org/abs/2205.01068) models and [MeZO-SGD](https://arxiv.org/abs/2305.17333) as examples. For additional information, please refer to the section on [Supported Models and ZO methods](#-supported-models-zo-methods-and-tasks).
 
 ### 1. Using [MeZO-Runner](example/mezo_runner/) to Evaluate Fine-tuning Tasks
 
